@@ -43,19 +43,20 @@ body {
 }
 
 /* === NAVIGATION BUTTONS === */
+/* Update di core/global.css */
 .tab-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
+    padding: 10px 20px; /* Padding enak */
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 500;
     color: var(--text-muted);
     transition: all 0.2s ease;
     border: 1px solid transparent;
+    white-space: nowrap; /* Biar teks gak turun baris */
 }
-
 .tab-btn i { font-size: 1.1rem; }
 
 .tab-btn:hover {
