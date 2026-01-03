@@ -133,14 +133,12 @@
         <span id="toast-message" class="text-sm font-bold">Peringatan sistem</span>
     </div>
 
-    <!-- MAIN SCRIPT (Handling Modal & Init) -->
+    <!-- MAIN SCRIPT -->
     <script type="module">
-        import { initRouter } from './core/router.js';
-        import { AppState } from './core/state.js';
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // ... KODE PANJANG BANGET DISINI HAPUS SEMUA ...
-        });
+        import { startApp } from './core/app.js';
+        
+        // Jalankan aplikasi saat HTML selesai dimuat
+        document.addEventListener('DOMContentLoaded', startApp);
     </script>
 </body>
             </html>
