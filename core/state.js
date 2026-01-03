@@ -42,4 +42,22 @@ export const AppState = {
         // localStorage.removeItem('MrG_Tab2_Data');
         window.location.reload();
     }
+    
+export const AppState = {
+    // ... config dll ...
+
+    load() {
+        // ... load config ...
+        StoryState.init();
+        StyleState.init(); // <--- TAMBAH INI
+    },
+
+    // ... getter story ...
+    
+    // Getter Style (Biar Tab 4 bisa ambil nanti)
+    get style() {
+        return StyleState.get();
+    }
+    
+    // ... sisa kode ...
 };
