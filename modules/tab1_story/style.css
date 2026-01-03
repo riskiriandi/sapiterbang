@@ -1,1 +1,36 @@
+/* Styling Khusus Tab Story */
 
+/* Efek Focus pada Textarea */
+#story-input:focus {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.1);
+}
+
+/* Character Tag Style */
+.char-tag {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.char-tag:hover {
+    border-color: var(--accent);
+    background: rgba(99, 102, 241, 0.1);
+    transform: translateY(-1px);
+}
+
+.char-tag i {
+    color: var(--accent);
+}
+
+/* Animasi Tombol Next Muncul */
+.show-action-bar {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+  }
