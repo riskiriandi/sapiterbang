@@ -16,32 +16,40 @@ export default function init() {
     const ratioButtons = document.querySelectorAll('.ratio-btn');
     const btnNext = document.getElementById('btn-next-tab');
 
-    // 1. LOAD DATA (Kalau user balik dari tab lain)
+    // === 1. FITUR ANTI-AMNESIA (LOAD DATA LAMA) ===
     const savedData = StyleState.get();
-    if (savedData.referenceUrl) showPreview(savedData.referenceUrl);
-    if (savedData.masterPrompt) promptInput.value = savedData.masterPrompt;
-    if (savedData.ratio) setActiveRatio(savedData.ratio);
+    
+    // A. Balikin Gambar
+    if (savedData.referenceUrl) {
+        showPreview(savedData.referenceUrl);
+        urlInput.value = savedData.referenceUrl; // Isi juga input textnya
+    }
+    
+    // B. Balikin Prompt
+    if (savedData.masterPrompt) {
+        promptInput.value = savedData.masterPrompt;
+    }
+    
+    // C. Balikin Ratio Button
+    if (savedData.ratio) {
+        setActiveRatio(savedData.ratio);
+    }
 
-    // 2. HANDLE FILE UPLOAD (ImgBB)
+    // === EVENT LISTENERS (Sama kayak sebelumnya) ===
+    
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // UI Loading
         uploadLoading.classList.remove('hidden');
         uploadLoading.classList.add('flex');
 
         try {
-            // Upload ke ImgBB
             const url = await uploadToImgBB(file);
-            
-            // Simpan & Preview
             StyleState.update({ url: url });
             showPreview(url);
-
-            // Auto Analyze (Opsional, enak buat UX)
-            triggerAnalyze(url);
-
+            // Opsional: Langsung analyze pas upload
+            // triggerAnalyze(url); 
         } catch (error) {
             alert("Upload Gagal: " + error.message);
         } finally {
@@ -50,7 +58,6 @@ export default function init() {
         }
     });
 
-    // 3. HANDLE URL INPUT
     btnLoadUrl.addEventListener('click', () => {
         const url = urlInput.value.trim();
         if (url) {
@@ -59,14 +66,12 @@ export default function init() {
         }
     });
 
-    // 4. HANDLE ANALYZE BUTTON
     btnAnalyze.addEventListener('click', () => {
         const currentUrl = StyleState.get().referenceUrl;
         if (!currentUrl) return alert("Upload gambar dulu bro!");
         triggerAnalyze(currentUrl);
     });
 
-    // 5. HANDLE RATIO BUTTONS
     ratioButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const ratio = btn.getAttribute('data-ratio');
@@ -75,12 +80,10 @@ export default function init() {
         });
     });
 
-    // 6. HANDLE TEXT INPUT (Manual Edit)
     promptInput.addEventListener('input', (e) => {
         StyleState.update({ prompt: e.target.value });
     });
 
-    // 7. NEXT TAB
     btnNext.addEventListener('click', () => {
         document.querySelector('button[data-target="tab3_chars"]').click();
     });
