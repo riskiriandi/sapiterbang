@@ -58,17 +58,43 @@
         </header>
 
         <!-- NAVIGASI (Scrollable di Mobile) -->
-        <nav class="glass-panel p-2 rounded-xl sticky top-2 z-40 mb-6 mx-auto w-full md:w-fit shadow-2xl backdrop-blur-xl border border-white/10 overflow-x-auto no-scrollbar">
-            <div class="flex items-center gap-2 md:gap-1 min-w-max px-2" id="main-nav">
-                <button data-target="tab1_story" class="tab-btn active"><i class="ph ph-book-open-text"></i> Story</button>
-                <i class="ph ph-caret-right text-gray-600 text-xs"></i>
-                <button data-target="tab2_style" class="tab-btn"><i class="ph ph-paint-brush"></i> Style</button>
-                <i class="ph ph-caret-right text-gray-600 text-xs"></i>
-                <button data-target="tab3_chars" class="tab-btn"><i class="ph ph-users"></i> Casting</button>
-                <i class="ph ph-caret-right text-gray-600 text-xs"></i>
-                <button data-target="tab4_scenes" class="tab-btn"><i class="ph ph-film-strip"></i> Scenes</button>
-                <i class="ph ph-caret-right text-gray-600 text-xs"></i>
-                <button data-target="tab5_video" class="tab-btn"><i class="ph ph-video-camera"></i> Render</button>
+        <!-- NAVIGASI (Full Width Studio Style) bagian ontok tempat ngator tombol style dan barisan nyo-->
+        <nav class="glass-panel p-1.5 rounded-xl sticky top-2 z-40 mb-6 w-full shadow-2xl backdrop-blur-xl border border-white/10 overflow-x-auto no-scrollbar">
+            <!-- Container dalam pakai w-full dan justify-evenly biar tombol menyebar rata atau justify-start biar rapi di kiri -->
+            <div class="flex items-center justify-between md:justify-center gap-2 md:gap-8 min-w-max px-2 w-full h-full" id="main-nav">
+                
+                <button data-target="tab1_story" class="tab-btn active flex-1 md:flex-none justify-center">
+                    <i class="ph ph-book-open-text text-lg"></i>
+                    <span>Story</span>
+                </button>
+                
+                <i class="ph ph-caret-right text-gray-700 text-xs hidden md:block"></i>
+                
+                <button data-target="tab2_style" class="tab-btn flex-1 md:flex-none justify-center">
+                    <i class="ph ph-paint-brush text-lg"></i>
+                    <span>Style</span>
+                </button>
+                
+                <i class="ph ph-caret-right text-gray-700 text-xs hidden md:block"></i>
+                
+                <button data-target="tab3_chars" class="tab-btn flex-1 md:flex-none justify-center">
+                    <i class="ph ph-users text-lg"></i>
+                    <span>Casting</span>
+                </button>
+                
+                <i class="ph ph-caret-right text-gray-700 text-xs hidden md:block"></i>
+                
+                <button data-target="tab4_scenes" class="tab-btn flex-1 md:flex-none justify-center">
+                    <i class="ph ph-film-strip text-lg"></i>
+                    <span>Scenes</span>
+                </button>
+                
+                <i class="ph ph-caret-right text-gray-700 text-xs hidden md:block"></i>
+
+                <button data-target="tab5_video" class="tab-btn flex-1 md:flex-none justify-center">
+                    <i class="ph ph-video-camera text-lg"></i>
+                    <span>Render</span>
+                </button>
             </div>
         </nav>
 
