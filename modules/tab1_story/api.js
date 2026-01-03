@@ -1,12 +1,21 @@
-// MODULE: Tab 1 API (Fix Endpoint POST)
+// MODULE: Tab 1 API (Fixed Endpoint & Debug)
 
 import { AppState } from '../../core/state.js';
 
 export async function generateStoryAI(roughIdea, useDialog) {
     
-    const apiKey = AppState.config.pollinationsKey || null;
+    // 1. AMBIL API KEY DARI STATE
+    // Kita pastikan dulu datanya ada
+    const apiKey = AppState.config.pollinationsKey ? AppState.config.pollinationsKey.trim() : null;
 
-    // 1. MODE PENULISAN
+    // DEBUG: Cek apakah Key terbaca? (Cek Console F12)
+    if (apiKey) {
+        console.log("🔑 API Key Terdeteksi: " + apiKey.substring(0, 5) + "...");
+    } else {
+        console.warn("⚠️ API Key Kosong. Menggunakan Mode Gratis (Mungkin lebih lambat/limit).");
+    }
+
+    // 2. MODE PENULISAN
     let styleInstruction = "";
     if (useDialog) {
         styleInstruction = `STYLE: SCREENPLAY (Naskah Film). Format: Scene Headings, Action, Dialogue. Focus on interaction.`;
@@ -14,7 +23,7 @@ export async function generateStoryAI(roughIdea, useDialog) {
         styleInstruction = `STYLE: NOVEL (Narasi). Focus on atmosphere, sensory details, inner thoughts. Minimal dialogue.`;
     }
 
-    // 2. SYSTEM PROMPT
+    // 3. SYSTEM PROMPT
     const systemPrompt = `
     ROLE: Professional Storyboard Writer.
     LANGUAGE: Script in INDONESIAN. Character Visuals in ENGLISH.
@@ -38,7 +47,7 @@ export async function generateStoryAI(roughIdea, useDialog) {
     }
     `;
 
-    // 3. HEADER & BODY
+    // 4. HEADER & BODY (Sesuai CURL User)
     const headers = {
         'Content-Type': 'application/json',
     };
@@ -48,19 +57,19 @@ export async function generateStoryAI(roughIdea, useDialog) {
     }
 
     const payload = {
+        model: "openai", // Kita pakai 'openai' dlu sbg base model (paling stabil di endpoint ini)
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `USER IDEA: ${roughIdea}` }
         ],
-        model: "claude", // Kita coba Claude, kalau gagal nanti ganti "openai"
+        jsonMode: true,
         seed: Math.floor(Math.random() * 99999)
-        // jsonMode dihapus biar lebih aman
     };
 
     try {
-        console.log("API: Sending POST request to /openai endpoint...");
+        console.log("API: Sending request to gen.pollinations.ai...");
         
-        // GANTI ENDPOINT KE YANG LEBIH STABIL BUAT POST
+        // GANTI ENDPOINT SESUAI CURL LU
         const response = await fetch('https://text.pollinations.ai/openai', {
             method: 'POST',
             headers: headers,
@@ -68,21 +77,25 @@ export async function generateStoryAI(roughIdea, useDialog) {
         });
 
         if (!response.ok) {
-            // Kita baca pesan error dari server biar tau kenapa
-            const errorText = await response.text();
-            console.error("Server Error Details:", errorText);
-            throw new Error(`Server Error: ${response.status} - ${errorText}`);
+            const errText = await response.text();
+            throw new Error(`Server Error (${response.status}): ${errText}`);
         }
         
         const text = await response.text();
-        console.log("API Response Success:", text.substring(0, 100) + "..."); // Log dikit
+        console.log("API Success:", text.substring(0, 50) + "...");
 
         const cleanText = text.replace(/```json|```/g, '').trim();
         return JSON.parse(cleanText);
 
     } catch (error) {
-        console.error("Story API Error FULL:", error);
-        // Tampilkan pesan error asli ke alert biar kita bisa debug
-        throw new Error(`Gagal: ${error.message}`);
+        console.error("Story API Error:", error);
+        
+        // Pesan Error yang Manusiawi
+        let msg = error.message;
+        if (msg.includes("401")) msg = "API Key Salah/Expired.";
+        if (msg.includes("429")) msg = "Terlalu banyak request (Limit). Tunggu sebentar.";
+        if (msg.includes("500")) msg = "Server AI lagi down. Coba lagi.";
+        
+        throw new Error(msg);
     }
-        }
+}
