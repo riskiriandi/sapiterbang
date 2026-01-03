@@ -1,1 +1,84 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MrG - AI Storyboard Modular</title>
+    
+    <!-- LIBRARY EKSTERNAL (Tailwind & Icons) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#050505', 
+                        accent: '#6366f1', 
+                        cardbg: 'rgba(30, 30, 36, 0.7)'
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
 
+    <!-- GLOBAL CSS (Hanya style dasar) -->
+    <link rel="stylesheet" href="core/global.css">
+</head>
+<body class="bg-darkbg text-white min-h-screen font-sans overflow-x-hidden">
+
+    <!-- BACKGROUND ANIMASI -->
+    <div class="fixed inset-0 z-[-2] opacity-30 pointer-events-none bg-pattern"></div>
+    <div class="fixed inset-0 z-[-1] pointer-events-none bg-grid"></div>
+
+    <div class="container mx-auto px-4 py-6 max-w-6xl relative z-10">
+        
+        <!-- HEADER -->
+        <header class="flex items-center justify-between mb-8 glass-panel p-4 rounded-2xl">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">M</div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">MrG <span class="text-accent text-xs uppercase tracking-widest ml-1">Architect</span></h1>
+                </div>
+            </div>
+            <div class="text-xs text-gray-500 font-mono">v2.0 Modular</div>
+        </header>
+
+        <!-- NAVIGASI TAB -->
+        <nav class="flex overflow-x-auto gap-3 mb-6 p-1.5 glass-panel rounded-xl sticky top-4 z-50 no-scrollbar" id="main-nav">
+            <!-- ID tombol harus sesuai dengan nama folder modules -->
+            <button data-target="tab1_story" class="tab-btn active">1. Story</button>
+            <button data-target="tab2_style" class="tab-btn">2. Style</button>
+            <button data-target="tab3_chars" class="tab-btn">3. Characters</button>
+            <button data-target="tab4_scenes" class="tab-btn">4. Scenes</button>
+            <button data-target="tab5_video" class="tab-btn">5. Video</button>
+        </nav>
+
+        <!-- AREA KONTEN DINAMIS (Disini file view.html akan masuk) -->
+        <main id="app-content" class="min-h-[60vh] relative transition-all duration-300">
+            <!-- Loading awal -->
+            <div class="flex flex-col items-center justify-center h-64 text-gray-500">
+                <i class="ph ph-spinner text-3xl animate-spin mb-4 text-accent"></i>
+                <p>Memuat Modul...</p>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- SCRIPT UTAMA -->
+    <!-- Type module penting agar bisa pakai import/export -->
+    <script type="module">
+        import { initRouter } from './core/router.js';
+        import { AppState } from './core/state.js';
+
+        // Inisialisasi Aplikasi saat halaman siap
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("System: Booting MrG...");
+            AppState.load(); // Load data lama jika ada
+            initRouter();    // Jalankan router
+        });
+    </script>
+</body>
+  </html>
