@@ -3,16 +3,9 @@ const LOCAL_KEY = 'MrG_Tab3_Data';
 
 export const CharState = {
     data: {
-        selectedModel: "seedream", // Default Model
+        selectedModel: "seedream", // Default sesuai request lu
         generatedChars: [] 
-        // Struktur generatedChars nanti:
-        // { 
-        //   name: "Nara", 
-        //   finalPrompt: "...", 
-        //   imgbbUrl: "https://...", 
-        //   deleteUrl: "...",
-        //   expiry: 123456789 
-        // }
+        // Struktur: { name: "Nara", prompt: "...", imgbbUrl: "...", deleteUrl: "..." }
     },
 
     init() {
@@ -23,13 +16,14 @@ export const CharState = {
     update(payload) {
         if (payload.model !== undefined) this.data.selectedModel = payload.model;
         
-        // Logic Update Array Karakter
+        // Logic Update/Insert Karakter
         if (payload.charUpdate) {
-            // Cari karakter yg namanya sama, lalu update datanya
             const index = this.data.generatedChars.findIndex(c => c.name === payload.charUpdate.name);
             if (index >= 0) {
-                this.data.generatedChars[index] = payload.charUpdate;
+                // Update data yang ada
+                this.data.generatedChars[index] = { ...this.data.generatedChars[index], ...payload.charUpdate };
             } else {
+                // Karakter baru
                 this.data.generatedChars.push(payload.charUpdate);
             }
         }
@@ -43,5 +37,11 @@ export const CharState = {
 
     get() {
         return this.data;
+    },
+
+    // Helper: Ambil data gambar karakter tertentu
+    getCharImage(name) {
+        const char = this.data.generatedChars.find(c => c.name === name);
+        return char ? char.imgbbUrl : null;
     }
 };
