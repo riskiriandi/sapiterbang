@@ -1,93 +1,63 @@
 // core/state.js
-// MANAGER DATA PUSAT (DENGAN 2 LACI PENYIMPANAN)
+// GUDANG DATA PUSAT (INCREMENTAL BUILD)
 
 const KEYS = {
-    PROJECT: 'MrG_Project_v2', // Data Cerita (Bisa di-reset)
-    CONFIG: 'MrG_Config_v1'    // API Keys (Tetap disimpan)
+    PROJECT: 'MrG_Project_Data_v1', // Data Cerita & Gambar
+    CONFIG: 'MrG_Config_Key_v1'     // API Key
 };
 
 export const AppState = {
-    // Laci 1: Data Project (Input User)
-    project: {
-        story: { raw: "", script: "", chars: [] },
-        style: { url: "", prompt: "", ratio: "16:9" },
-        characters: [],
-        scenes: [],
-        video: null
-    },
-
-    // Laci 2: Konfigurasi (API Key)
+    // LACI 1: KONFIGURASI (API KEY)
     config: {
         imgbbKey: "",
-        pollinationsKey: "" // Opsional
+        pollinationsKey: ""
     },
 
-    // --- FUNGSI LOAD (Dipanggil saat web dibuka) ---
+    // LACI 2: DATA PROJECT (Kita fokus struktur Tab 1 dulu)
+    project: {
+        // === TAB 1: STORY DATA ===
+        story: {
+            rawIdea: "",        // Ide kasar user
+            isDialogMode: false,// Status toggle dialog
+            script: "",         // Hasil naskah
+            characters: []      // Array deskripsi karakter (Inggris)
+        },
+
+        // === TAB 2: STYLE DATA (Placeholder dulu) ===
+        style: {
+            url: "", prompt: ""
+        }
+        // Nanti Tab 3, 4, 5 nyusul disini...
+    },
+
+    // --- FUNGSI LOAD ---
     load() {
-        // Load Config (API Key)
+        // Load API Key
         const savedConfig = localStorage.getItem(KEYS.CONFIG);
         if (savedConfig) this.config = JSON.parse(savedConfig);
 
-        // Load Project (Cerita terakhir)
+        // Load Project Data
         const savedProject = localStorage.getItem(KEYS.PROJECT);
         if (savedProject) {
-            this.project = JSON.parse(savedProject);
-            console.log("State: Project data restored.");
-        } else {
-            console.log("State: New project started.");
+            // Kita merge biar kalau ada struktur baru gak error
+            this.project = { ...this.project, ...JSON.parse(savedProject) };
+            console.log("State: Project Loaded.");
         }
     },
 
-    // --- FUNGSI SAVE (Dipanggil tiap user ngetik/generate) ---
+    // --- FUNGSI SAVE ---
     saveProject() {
         localStorage.setItem(KEYS.PROJECT, JSON.stringify(this.project));
-        console.log("State: Project Auto-saved.");
+        console.log("State: Project Saved.");
     },
 
     saveConfig() {
         localStorage.setItem(KEYS.CONFIG, JSON.stringify(this.config));
-        console.log("State: Config Saved.");
     },
 
-    // --- FUNGSI RESET (Hanya hapus project, API Key aman) ---
+    // --- FUNGSI RESET ---
     resetProject() {
-        this.project = {
-            story: { raw: "", script: "", chars: [] },
-            style: { url: "", prompt: "", ratio: "16:9" },
-            characters: [],
-            scenes: [],
-            video: null
-        };
-        this.saveProject();
-        window.location.reload(); // Reload biar bersih
-    },
-
-    // --- VALIDATOR (Satpam Tab) ---
-    // Cek apakah user boleh masuk ke tab tertentu?
-    canEnterTab(tabName) {
-        // Tab 1 selalu boleh
-        if (tabName === 'tab1_story') return true;
-
-        // Mau ke Tab 2? Cek Tab 1 (Harus ada Script)
-        if (tabName === 'tab2_style') {
-            return this.project.story.script.length > 10; 
-        }
-
-        // Mau ke Tab 3? Cek Tab 2 (Harus ada Style Prompt)
-        if (tabName === 'tab3_chars') {
-            return this.project.style.prompt.length > 5;
-        }
-
-        // Mau ke Tab 4? Cek Tab 3 (Harus ada minimal 1 karakter)
-        if (tabName === 'tab4_scenes') {
-            return this.project.characters.length > 0;
-        }
-
-        // Mau ke Tab 5? Cek Tab 4 (Harus ada Scene)
-        if (tabName === 'tab5_video') {
-            return this.project.scenes.length > 0;
-        }
-
-        return false;
+        localStorage.removeItem(KEYS.PROJECT);
+        window.location.reload();
     }
 };
