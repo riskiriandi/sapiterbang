@@ -139,47 +139,7 @@
         import { AppState } from './core/state.js';
 
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Init System
-            AppState.load();
-            initRouter();
-
-            // 2. Settings Modal Logic
-            const modal = document.getElementById('settings-modal');
-            const btnDesktop = document.getElementById('btn-settings-desktop');
-            const btnMobile = document.getElementById('btn-settings-mobile');
-            const btnClose = document.getElementById('close-settings');
-            const overlay = document.getElementById('overlay-settings');
-            
-            // Inputs
-            const inpImgbb = document.getElementById('inp-imgbb');
-            const inpPolli = document.getElementById('inp-polli');
-
-            function openModal() {
-                // Isi input dengan data yang tersimpan
-                inpImgbb.value = AppState.config.imgbbKey || "";
-                inpPolli.value = AppState.config.pollinationsKey || "";
-                modal.classList.remove('hidden');
-            }
-            function closeModal() { modal.classList.add('hidden'); }
-
-            [btnDesktop, btnMobile].forEach(b => b?.addEventListener('click', openModal));
-            [btnClose, overlay].forEach(b => b?.addEventListener('click', closeModal));
-
-            // 3. Save Config
-            document.getElementById('btn-save-config').addEventListener('click', () => {
-                AppState.config.imgbbKey = inpImgbb.value.trim();
-                AppState.config.pollinationsKey = inpPolli.value.trim();
-                AppState.saveConfig();
-                closeModal();
-                alert("✅ API Key Tersimpan!");
-            });
-
-            // 4. Reset Project
-            document.getElementById('btn-reset-project').addEventListener('click', () => {
-                if(confirm("Yakin mau hapus data cerita? API Key tidak akan hilang.")) {
-                    AppState.resetProject();
-                }
-            });
+            // ... KODE PANJANG BANGET DISINI HAPUS SEMUA ...
         });
     </script>
 </body>
