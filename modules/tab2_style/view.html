@@ -1,1 +1,101 @@
+<div class="animate-fade-in max-w-5xl mx-auto space-y-6 pb-20">
+    
+    <!-- HEADER -->
+    <div class="flex items-center gap-3 border-b border-white/5 pb-4">
+        <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+            <i class="ph ph-paint-brush text-accent"></i> Visual Style
+        </h2>
+        <span class="px-2 py-0.5 rounded text-[10px] bg-accent/20 text-accent border border-accent/20 font-mono">Vision AI Enabled</span>
+    </div>
 
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- KOLOM KIRI: UPLOAD & PREVIEW -->
+        <div class="space-y-4">
+            <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider">1. Reference Image</label>
+            
+            <!-- Upload Box -->
+            <div id="drop-zone" class="relative border-2 border-dashed border-white/10 hover:border-accent/50 rounded-xl bg-black/20 transition-all group cursor-pointer h-64 flex flex-col items-center justify-center overflow-hidden">
+                
+                <input type="file" id="file-input" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20">
+                
+                <!-- Placeholder -->
+                <div id="upload-placeholder" class="text-center p-4 transition-opacity duration-300">
+                    <i class="ph ph-upload-simple text-4xl text-gray-500 group-hover:text-accent mb-3 transition-colors"></i>
+                    <p class="text-sm text-gray-300 font-bold">Klik atau Tarik Gambar ke Sini</p>
+                    <p class="text-xs text-gray-500 mt-1">JPG/PNG (Max 5MB)</p>
+                </div>
+
+                <!-- Preview Image (Hidden Awalnya) -->
+                <img id="image-preview" src="" class="absolute inset-0 w-full h-full object-cover hidden z-10 transition-opacity">
+                
+                <!-- Loading Overlay -->
+                <div id="upload-loading" class="absolute inset-0 bg-black/80 z-30 hidden flex-col items-center justify-center">
+                    <i class="ph ph-spinner animate-spin text-3xl text-accent"></i>
+                    <p class="text-xs text-white mt-2">Uploading to ImgBB...</p>
+                </div>
+            </div>
+
+            <!-- URL Input Option -->
+            <div class="flex items-center gap-2">
+                <div class="text-[10px] text-gray-500 font-bold whitespace-nowrap">ATAU LINK:</div>
+                <input type="text" id="url-input" placeholder="https://..." class="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-accent outline-none">
+                <button id="btn-load-url" class="p-2 bg-white/10 rounded-lg hover:bg-white/20"><i class="ph ph-arrow-right text-white"></i></button>
+            </div>
+        </div>
+
+        <!-- KOLOM KANAN: CONFIG & OUTPUT -->
+        <div class="space-y-6">
+            
+            <!-- Aspect Ratio -->
+            <div>
+                <label class="block text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">2. Aspect Ratio</label>
+                <div class="grid grid-cols-3 gap-3">
+                    <button class="ratio-btn active" data-ratio="16:9">
+                        <div class="w-8 h-5 border-2 border-current rounded-sm mb-1"></div>
+                        16:9 (Cinematic)
+                    </button>
+                    <button class="ratio-btn" data-ratio="9:16">
+                        <div class="w-4 h-6 border-2 border-current rounded-sm mb-1"></div>
+                        9:16 (Shorts)
+                    </button>
+                    <button class="ratio-btn" data-ratio="1:1">
+                        <div class="w-5 h-5 border-2 border-current rounded-sm mb-1"></div>
+                        1:1 (Square)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Master Prompt -->
+            <div class="flex-grow flex flex-col">
+                <div class="flex justify-between items-end mb-2">
+                    <label class="text-gray-400 text-xs font-bold uppercase tracking-wider">3. Master Style Prompt</label>
+                    <button id="btn-analyze" class="text-xs bg-accent hover:bg-accentHover text-white px-3 py-1.5 rounded flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="ph ph-magic-wand"></i> Auto-Analyze
+                    </button>
+                </div>
+                
+                <div class="relative group flex-grow">
+                    <textarea id="prompt-input" rows="6" 
+                        class="w-full bg-black/40 text-gray-200 p-4 rounded-xl border border-white/10 focus:border-accent focus:outline-none resize-none text-sm leading-relaxed transition-all"
+                        placeholder="Deskripsi style akan muncul di sini... (Misal: Cyberpunk, Neon Lights, Unreal Engine 5)"></textarea>
+                    
+                    <!-- Loading Vision -->
+                    <div id="vision-loading" class="absolute inset-0 bg-black/80 backdrop-blur-sm rounded-xl hidden flex-col items-center justify-center z-20">
+                        <i class="ph ph-eye animate-pulse text-4xl text-accent mb-2"></i>
+                        <p class="text-xs text-white font-mono">ANALYZING STYLE...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- FLOATING NEXT -->
+    <div class="fixed bottom-8 right-8 z-50">
+        <button id="btn-next-tab" class="btn-pro bg-white text-black hover:bg-gray-200 border-none shadow-2xl shadow-white/20 px-6 py-3 rounded-full flex items-center gap-3">
+            <span class="font-bold">Lanjut ke Casting</span>
+            <i class="ph ph-arrow-right font-bold"></i>
+        </button>
+    </div>
+  </div>
