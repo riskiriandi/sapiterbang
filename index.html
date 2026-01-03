@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MrG - AI Storyboard Modular</title>
     
-    <!-- LIBRARY EKSTERNAL (Tailwind & Icons) -->
+    <!-- LIBRARY -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script>
@@ -14,71 +14,136 @@
             theme: {
                 extend: {
                     colors: {
-                        darkbg: '#050505', 
+                        darkbg: '#030304', 
+                        surface: '#0f0f12',
                         accent: '#6366f1', 
-                        cardbg: 'rgba(30, 30, 36, 0.7)'
+                        accentHover: '#4f46e5'
                     },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                    fontFamily: { 
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Courier New', 'monospace'] 
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
                 }
             }
         }
     </script>
 
-    <!-- GLOBAL CSS (Hanya style dasar) -->
     <link rel="stylesheet" href="core/global.css">
 </head>
-<body class="bg-darkbg text-white min-h-screen font-sans overflow-x-hidden">
+<body class="bg-darkbg text-white min-h-screen font-sans overflow-x-hidden flex flex-col">
 
-    <!-- BACKGROUND ANIMASI -->
-    <div class="fixed inset-0 z-[-2] opacity-30 pointer-events-none bg-pattern"></div>
-    <div class="fixed inset-0 z-[-1] pointer-events-none bg-grid"></div>
+    <!-- BACKGROUND SYSTEM -->
+    <div class="fixed inset-0 z-[-2] bg-pattern"></div>
+    <div class="fixed inset-0 z-[-1] bg-grid opacity-20"></div>
+    <div class="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent to-transparent opacity-50"></div>
 
-    <div class="container mx-auto px-4 py-6 max-w-6xl relative z-10">
+    <!-- WRAPPER UTAMA (Flex biar footer kedorong ke bawah) -->
+    <div class="container mx-auto px-4 py-6 max-w-6xl relative z-10 flex-grow flex flex-col">
         
-        <!-- HEADER -->
-        <header class="flex items-center justify-between mb-8 glass-panel p-4 rounded-2xl">
+        <!-- HEADER STUDIO STYLE -->
+        <header class="flex items-center justify-between mb-8 glass-panel px-6 py-4 rounded-xl border-l-4 border-accent">
             <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/30">M</div>
+                <!-- Logo Icon -->
+                <div class="relative group">
+                    <div class="absolute -inset-1 bg-accent rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-200"></div>
+                    <div class="relative w-10 h-10 bg-surface border border-white/10 rounded-lg flex items-center justify-center">
+                        <span class="font-black text-xl italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white to-gray-500">M</span>
+                    </div>
+                </div>
+                
+                <!-- Title -->
                 <div>
-                    <h1 class="text-xl font-bold tracking-wide">MrG <span class="text-accent text-xs uppercase tracking-widest ml-1">Architect</span></h1>
+                    <h1 class="text-lg font-bold tracking-wide text-white leading-tight">MrG <span class="text-gray-500 font-normal">Studio</span></h1>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <p class="text-[10px] text-gray-400 font-mono uppercase tracking-widest">System Online v2.0</p>
+                    </div>
                 </div>
             </div>
-            <div class="text-xs text-gray-500 font-mono">v2.0 Modular</div>
+
+            <!-- Right Controls -->
+            <div class="flex items-center gap-3">
+                <button class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors border border-white/5">
+                    <i class="ph ph-gear text-gray-400"></i>
+                </button>
+            </div>
         </header>
 
-        <!-- NAVIGASI TAB -->
-        <nav class="flex overflow-x-auto gap-3 mb-6 p-1.5 glass-panel rounded-xl sticky top-4 z-50 no-scrollbar" id="main-nav">
-            <!-- ID tombol harus sesuai dengan nama folder modules -->
-            <button data-target="tab1_story" class="tab-btn active">1. Story</button>
-            <button data-target="tab2_style" class="tab-btn">2. Style</button>
-            <button data-target="tab3_chars" class="tab-btn">3. Characters</button>
-            <button data-target="tab4_scenes" class="tab-btn">4. Scenes</button>
-            <button data-target="tab5_video" class="tab-btn">5. Video</button>
+        <!-- NAVIGATION DOCK -->
+        <nav class="glass-panel p-2 rounded-xl sticky top-4 z-50 mb-8 mx-auto max-w-fit shadow-2xl shadow-black/50 backdrop-blur-xl border border-white/10">
+            <div class="flex items-center gap-1" id="main-nav">
+                <button data-target="tab1_story" class="tab-btn active">
+                    <i class="ph ph-book-open-text text-lg"></i>
+                    <span>Story</span>
+                </button>
+                
+                <div class="w-px h-6 bg-white/10 mx-1"></div> <!-- Divider -->
+                
+                <button data-target="tab2_style" class="tab-btn">
+                    <i class="ph ph-paint-brush text-lg"></i>
+                    <span>Style</span>
+                </button>
+                
+                <button data-target="tab3_chars" class="tab-btn">
+                    <i class="ph ph-users text-lg"></i>
+                    <span>Casting</span>
+                </button>
+                
+                <button data-target="tab4_scenes" class="tab-btn">
+                    <i class="ph ph-film-strip text-lg"></i>
+                    <span>Scenes</span>
+                </button>
+                
+                <div class="w-px h-6 bg-white/10 mx-1"></div> <!-- Divider -->
+
+                <button data-target="tab5_video" class="tab-btn">
+                    <i class="ph ph-video-camera text-lg"></i>
+                    <span>Render</span>
+                </button>
+            </div>
         </nav>
 
-        <!-- AREA KONTEN DINAMIS (Disini file view.html akan masuk) -->
-        <main id="app-content" class="min-h-[60vh] relative transition-all duration-300">
-            <!-- Loading awal -->
-            <div class="flex flex-col items-center justify-center h-64 text-gray-500">
-                <i class="ph ph-spinner text-3xl animate-spin mb-4 text-accent"></i>
-                <p>Memuat Modul...</p>
+        <!-- MAIN WORKSPACE -->
+        <main id="app-content" class="flex-grow min-h-[500px] relative transition-all duration-500 ease-out">
+            <!-- Loading State -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
+                <div class="relative w-16 h-16 mb-4">
+                    <div class="absolute inset-0 border-4 border-white/10 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-t-accent rounded-full animate-spin"></div>
+                </div>
+                <p class="font-mono text-xs uppercase tracking-widest animate-pulse">Initializing Module...</p>
             </div>
         </main>
 
     </div>
 
-    <!-- SCRIPT UTAMA -->
-    <!-- Type module penting agar bisa pakai import/export -->
+    <!-- FOOTER -->
+    <footer class="w-full py-6 mt-10 border-t border-white/5 bg-black/40 backdrop-blur-sm">
+        <div class="container mx-auto text-center">
+            <p class="text-[10px] text-gray-500 font-mono tracking-widest uppercase mb-1">
+                AI Storyboard Generator Architecture
+            </p>
+            <div class="flex items-center justify-center gap-2 text-xs text-gray-400">
+                <span>Created by</span>
+                <span class="text-white font-bold bg-white/10 px-2 py-0.5 rounded border border-white/5 hover:border-accent/50 transition-colors cursor-default">
+                    riskiriandi
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- SCRIPT -->
     <script type="module">
         import { initRouter } from './core/router.js';
         import { AppState } from './core/state.js';
 
-        // Inisialisasi Aplikasi saat halaman siap
         document.addEventListener('DOMContentLoaded', () => {
-            console.log("System: Booting MrG...");
-            AppState.load(); // Load data lama jika ada
-            initRouter();    // Jalankan router
+            AppState.load();
+            initRouter();
         });
     </script>
 </body>
-  </html>
+                    </html>
