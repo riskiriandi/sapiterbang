@@ -1,15 +1,12 @@
-// MODULE: Tab 1 API (Final Version)
-// Fitur: Support API Key, Claude Model, Cat-Person Logic, Anti-404
+// MODULE: Tab 1 API (Fix Endpoint POST)
 
-import { AppState } from '../../core/state.js'; // Kita butuh ini buat ambil API Key
+import { AppState } from '../../core/state.js';
 
 export async function generateStoryAI(roughIdea, useDialog) {
     
-    // 1. CEK API KEY (Dari Menu Settings)
-    // Kalau user isi key, kita pake. Kalau kosong, null.
     const apiKey = AppState.config.pollinationsKey || null;
 
-    // 2. MODE PENULISAN
+    // 1. MODE PENULISAN
     let styleInstruction = "";
     if (useDialog) {
         styleInstruction = `STYLE: SCREENPLAY (Naskah Film). Format: Scene Headings, Action, Dialogue. Focus on interaction.`;
@@ -17,7 +14,7 @@ export async function generateStoryAI(roughIdea, useDialog) {
         styleInstruction = `STYLE: NOVEL (Narasi). Focus on atmosphere, sensory details, inner thoughts. Minimal dialogue.`;
     }
 
-    // 3. SYSTEM PROMPT (Si Kucing & Template)
+    // 2. SYSTEM PROMPT
     const systemPrompt = `
     ROLE: Professional Storyboard Writer.
     LANGUAGE: Script in INDONESIAN. Character Visuals in ENGLISH.
@@ -41,17 +38,13 @@ export async function generateStoryAI(roughIdea, useDialog) {
     }
     `;
 
-    // 4. SIAPKAN HEADER & BODY
+    // 3. HEADER & BODY
     const headers = {
         'Content-Type': 'application/json',
     };
 
-    // Kalau ada API Key, tempel di Header (Sesuai contekan lu)
     if (apiKey) {
         headers['Authorization'] = `Bearer ${apiKey}`;
-        console.log("API: Using Custom API Key");
-    } else {
-        console.log("API: Using Free Mode");
     }
 
     const payload = {
@@ -59,34 +52,37 @@ export async function generateStoryAI(roughIdea, useDialog) {
             { role: "system", content: systemPrompt },
             { role: "user", content: `USER IDEA: ${roughIdea}` }
         ],
-        model: "claude", // Paksa Claude
-        jsonMode: true,
+        model: "claude", // Kita coba Claude, kalau gagal nanti ganti "openai"
         seed: Math.floor(Math.random() * 99999)
+        // jsonMode dihapus biar lebih aman
     };
 
     try {
-        console.log("API: Sending POST request...");
+        console.log("API: Sending POST request to /openai endpoint...");
         
-        // 5. KIRIM REQUEST
-        // Kita tembak ke endpoint text yang support OpenAI Format
-        const response = await fetch('https://text.pollinations.ai/', {
+        // GANTI ENDPOINT KE YANG LEBIH STABIL BUAT POST
+        const response = await fetch('https://text.pollinations.ai/openai', {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            throw new Error(`Server Error: ${response.status} (Coba lagi nanti)`);
+            // Kita baca pesan error dari server biar tau kenapa
+            const errorText = await response.text();
+            console.error("Server Error Details:", errorText);
+            throw new Error(`Server Error: ${response.status} - ${errorText}`);
         }
         
         const text = await response.text();
-        
-        // 6. BERSIHKAN HASIL
+        console.log("API Response Success:", text.substring(0, 100) + "..."); // Log dikit
+
         const cleanText = text.replace(/```json|```/g, '').trim();
         return JSON.parse(cleanText);
 
     } catch (error) {
-        console.error("Story API Error:", error);
-        throw new Error("Gagal generate. Cek koneksi atau API Key.");
+        console.error("Story API Error FULL:", error);
+        // Tampilkan pesan error asli ke alert biar kita bisa debug
+        throw new Error(`Gagal: ${error.message}`);
     }
         }
