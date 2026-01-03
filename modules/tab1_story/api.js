@@ -1,72 +1,63 @@
-// MODULE: Tab 1 API (VIP Endpoint - Claude Support)
-// Menggunakan endpoint 'gen.pollinations.ai' sesuai kode lama user.
-
 import { AppState } from '../../core/state.js';
 
 export async function generateStoryAI(roughIdea, useDialog) {
     
-    // 1. AMBIL API KEY
     const apiKey = AppState.config.pollinationsKey ? AppState.config.pollinationsKey.trim() : null;
 
-    // Cek Key (Wajib ada buat endpoint ini kalau mau pilih model)
-    if (!apiKey) {
-        console.warn("⚠️ API Key Kosong! Endpoint ini mungkin menolak request tanpa key atau fallback ke model dasar.");
-    } else {
-        console.log("🔑 Menggunakan API Key & Model Claude");
-    }
+    // Mode Instruksi
+    let styleInstruction = useDialog 
+        ? "STYLE: Screenplay/Naskah Film (Focus on Dialogue & Action)." 
+        : "STYLE: Novel/Narasi (Focus on Atmosphere & Description).";
 
-    // 2. MODE PENULISAN
-    let styleInstruction = "";
-    if (useDialog) {
-        styleInstruction = `STYLE: SCREENPLAY (Naskah Film). Format: Scene Headings, Action, Dialogue. Focus on interaction.`;
-    } else {
-        styleInstruction = `STYLE: NOVEL (Narasi). Focus on atmosphere, sensory details, inner thoughts. Minimal dialogue.`;
-    }
-
-    // 3. SYSTEM PROMPT (Otak Cerdas Kita)
+    // SYSTEM PROMPT: SMART SEGMENTATION
     const systemPrompt = `
-    ROLE: Professional Storyboard Writer.
-    LANGUAGE: Script in INDONESIAN. Character Visuals in ENGLISH.
+    ROLE: Professional Storyboard Writer & Visualizer.
+    LANGUAGE: Story in INDONESIAN. Visual Notes in ENGLISH.
     
     ${styleInstruction}
     
-    TASK 1: MASTER SCRIPT
-    - Write a CONTINUOUS story flow. Do NOT break into "Shots" yet.
+    TASK:
+    1. Write a story based on the user idea.
+    2. BREAK DOWN the story into logical "VISUAL SEGMENTS" (Chunks).
     
-    TASK 2: CHARACTER DESIGN (Strict Template)
-    - Format: [Name]: [Gender & Age] [Body Build] [Skin/Fur Texture] [Detailed Top Outfit] [Detailed Bottom Outfit] [Footwear] [Accessories] [Vibe]
+    RULES FOR SEGMENTATION:
+    - Group sentences that belong to the SAME visual shot/moment.
+    - Example: "Fajar menyingsing. 3 orang mendaki." -> This is ONE segment (Wide Shot).
+    - Example: "Ryo kedinginan. Bulunya berdiri." -> This is ONE segment (Focus Shot).
+    - If there is dialogue, put it in its own segment.
 
-    SPECIAL RULE: "HUMANOID KUCING" / "CAT PERSON"
-    - If user mentions this, you MUST describe them as: "Anthropomorphic feline head (whiskers, wet nose, cat ears), Humanoid body structure covered in fine soft velvet-like fur, Humanoid hands with paw pads."
-    - Blend this description naturally into the template.
+    SPECIAL RULE: "HUMANOID KUCING"
+    - Describe them as: "Anthropomorphic feline head, humanoid body with fine fur".
 
-    OUTPUT JSON ONLY:
+    OUTPUT JSON FORMAT ONLY:
     {
-        "script": "Teks naskah...",
-        "characters": ["Name: English description..."]
+        "segments": [
+            {
+                "type": "ESTABLISHING" (or ACTION / DIALOGUE / FOCUS),
+                "text": "Teks naskah bahasa Indonesia...",
+                "visual_note": "Brief English visual description (e.g., Wide shot of sunrise, silhouettes of 3 characters)"
+            }
+        ],
+        "characters": [
+            { "name": "Name", "desc": "Full English visual description..." }
+        ]
     }
     `;
 
-    // 4. HEADER & BODY (Sesuai Kode Lama Lu)
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}` // Header Wajib buat VIP
-    };
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     const payload = {
-        model: "claude", // NAH INI DIA! Kita tembak Claude.
+        model: "openai", // Pakai model text yang pinter logika
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `USER IDEA: ${roughIdea}` }
         ],
-        // Kita gak pake jsonMode: true, kita percaya sama prompt "OUTPUT JSON ONLY"
-        // biar gak bentrok sama model Claude
+        seed: Math.floor(Math.random() * 99999)
     };
 
     try {
-        console.log("API: Sending request to gen.pollinations.ai (Claude)...");
-        
-        // ENDPOINT SAKTI (Sesuai kode lama lu)
+        console.log("API: Sending Smart Segment Request...");
         const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
             method: 'POST',
             headers: headers,
@@ -78,18 +69,18 @@ export async function generateStoryAI(roughIdea, useDialog) {
             throw new Error(`Server Error (${response.status}): ${errText}`);
         }
         
-        // Parsing cara OpenAI (karena endpointnya kompatibel OpenAI)
         const data = await response.json();
         const text = data.choices[0].message.content;
-
-        console.log("API Success:", text.substring(0, 50) + "...");
-
-        // Bersihkan Markdown JSON
         const cleanText = text.replace(/```json|```/g, '').trim();
-        return JSON.parse(cleanText);
+        
+        // Validasi JSON
+        const result = JSON.parse(cleanText);
+        if(!result.segments || !result.characters) throw new Error("Format JSON AI salah.");
+
+        return result;
 
     } catch (error) {
         console.error("Story API Error:", error);
         throw new Error(`Gagal: ${error.message}`);
     }
-}
+        }
