@@ -1,63 +1,45 @@
-// core/state.js
-// GUDANG DATA PUSAT (INCREMENTAL BUILD)
+// CORE STATE (AGGREGATOR)
+// Tugas: Menjadi pintu utama akses data antar modul
 
-const KEYS = {
-    PROJECT: 'MrG_Project_Data_v1', // Data Cerita & Gambar
-    CONFIG: 'MrG_Config_Key_v1'     // API Key
-};
+// Import State Spesialis
+import { StoryState } from '../modules/tab1_story/state.js';
+// Nanti import { StyleState } from '../modules/tab2_style/state.js';
+
+const CONFIG_KEY = 'MrG_Config_Global';
 
 export const AppState = {
-    // LACI 1: KONFIGURASI (API KEY)
+    // Config Global (API Key) tetap disini karena dipakai bareng-bareng
     config: {
         imgbbKey: "",
         pollinationsKey: ""
     },
 
-    // LACI 2: DATA PROJECT (Kita fokus struktur Tab 1 dulu)
-    project: {
-        // === TAB 1: STORY DATA ===
-        story: {
-            rawIdea: "",        // Ide kasar user
-            isDialogMode: false,// Status toggle dialog
-            script: "",         // Hasil naskah
-            characters: []      // Array deskripsi karakter (Inggris)
-        },
-
-        // === TAB 2: STYLE DATA (Placeholder dulu) ===
-        style: {
-            url: "", prompt: ""
-        }
-        // Nanti Tab 3, 4, 5 nyusul disini...
-    },
-
-    // --- FUNGSI LOAD ---
+    // --- INIT SEMUA STATE ---
     load() {
-        // Load API Key
-        const savedConfig = localStorage.getItem(KEYS.CONFIG);
+        // 1. Load Config Global
+        const savedConfig = localStorage.getItem(CONFIG_KEY);
         if (savedConfig) this.config = JSON.parse(savedConfig);
 
-        // Load Project Data
-        const savedProject = localStorage.getItem(KEYS.PROJECT);
-        if (savedProject) {
-            // Kita merge biar kalau ada struktur baru gak error
-            this.project = { ...this.project, ...JSON.parse(savedProject) };
-            console.log("State: Project Loaded.");
-        }
+        // 2. Trigger Load di masing-masing Module State
+        StoryState.init();
+        // StyleState.init();
     },
 
-    // --- FUNGSI SAVE ---
-    saveProject() {
-        localStorage.setItem(KEYS.PROJECT, JSON.stringify(this.project));
-        console.log("State: Project Saved.");
+    // --- AKSES DATA (GETTERS) ---
+    // Kalau Tab 3 mau data story, dia panggil AppState.story
+    get story() {
+        return StoryState.get();
     },
 
+    // --- HELPER CONFIG ---
     saveConfig() {
-        localStorage.setItem(KEYS.CONFIG, JSON.stringify(this.config));
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(this.config));
     },
 
-    // --- FUNGSI RESET ---
     resetProject() {
-        localStorage.removeItem(KEYS.PROJECT);
+        // Hapus data per modul
+        localStorage.removeItem('MrG_Tab1_Data');
+        // localStorage.removeItem('MrG_Tab2_Data');
         window.location.reload();
     }
 };
