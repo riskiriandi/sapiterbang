@@ -61,8 +61,11 @@ export default function init() {
             const defaultPrompt = `
 ${styleData.masterPrompt || "Cinematic lighting"}. 
 Character: ${char.name}. ${char.desc}. 
-Standard camera shot from front, full body visible, neutral background, looking at camera, high resolution, 8k.
-            `.trim();
+(FULL BODY SHOT), standing upright, looking at camera.
+**BACKGROUND: Solid neutral grey studio background, simple, clean, no details, flat color.**
+(Reason: To ensure character consistency for future scene generation).
+High resolution, 8k, sharp focus.
+`.trim();
 
             const card = document.createElement('div');
             card.className = "glass-panel rounded-xl overflow-hidden flex flex-col group border border-white/5 hover:border-accent/30 transition-all";
