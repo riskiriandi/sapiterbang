@@ -1,4 +1,5 @@
-// MODULE: Tab 1 API (Fixed Model Name & Endpoint)
+// MODULE: Tab 1 API (VIP Endpoint - Claude Support)
+// Menggunakan endpoint 'gen.pollinations.ai' sesuai kode lama user.
 
 import { AppState } from '../../core/state.js';
 
@@ -6,6 +7,13 @@ export async function generateStoryAI(roughIdea, useDialog) {
     
     // 1. AMBIL API KEY
     const apiKey = AppState.config.pollinationsKey ? AppState.config.pollinationsKey.trim() : null;
+
+    // Cek Key (Wajib ada buat endpoint ini kalau mau pilih model)
+    if (!apiKey) {
+        console.warn("⚠️ API Key Kosong! Endpoint ini mungkin menolak request tanpa key atau fallback ke model dasar.");
+    } else {
+        console.log("🔑 Menggunakan API Key & Model Claude");
+    }
 
     // 2. MODE PENULISAN
     let styleInstruction = "";
@@ -15,7 +23,7 @@ export async function generateStoryAI(roughIdea, useDialog) {
         styleInstruction = `STYLE: NOVEL (Narasi). Focus on atmosphere, sensory details, inner thoughts. Minimal dialogue.`;
     }
 
-    // 3. SYSTEM PROMPT (Tetap sama, logic Kucing & Template aman)
+    // 3. SYSTEM PROMPT (Otak Cerdas Kita)
     const systemPrompt = `
     ROLE: Professional Storyboard Writer.
     LANGUAGE: Script in INDONESIAN. Character Visuals in ENGLISH.
@@ -32,38 +40,33 @@ export async function generateStoryAI(roughIdea, useDialog) {
     - If user mentions this, you MUST describe them as: "Anthropomorphic feline head (whiskers, wet nose, cat ears), Humanoid body structure covered in fine soft velvet-like fur, Humanoid hands with paw pads."
     - Blend this description naturally into the template.
 
-    OUTPUT JSON:
+    OUTPUT JSON ONLY:
     {
         "script": "Teks naskah...",
         "characters": ["Name: English description..."]
     }
     `;
 
-    // 4. HEADER & BODY (Sesuai Standar OpenAI/Pollinations Gen)
+    // 4. HEADER & BODY (Sesuai Kode Lama Lu)
     const headers = {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}` // Header Wajib buat VIP
     };
 
-    if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-
     const payload = {
-        // PENTING: Ganti 'claude' jadi 'openai'. Server akan otomatis kasih model terbaik.
-        model: "openai", 
+        model: "claude", // NAH INI DIA! Kita tembak Claude.
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `USER IDEA: ${roughIdea}` }
         ],
-        // Hapus jsonMode: true karena kadang bikin error di endpoint gen
-        // Kita andalkan prompt "OUTPUT JSON" di atas
-        seed: Math.floor(Math.random() * 99999)
+        // Kita gak pake jsonMode: true, kita percaya sama prompt "OUTPUT JSON ONLY"
+        // biar gak bentrok sama model Claude
     };
 
     try {
-        console.log("API: Sending request to gen.pollinations.ai...");
+        console.log("API: Sending request to gen.pollinations.ai (Claude)...");
         
-        // GANTI ENDPOINT KE JALUR UTAMA (GEN)
+        // ENDPOINT SAKTI (Sesuai kode lama lu)
         const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
             method: 'POST',
             headers: headers,
@@ -75,7 +78,7 @@ export async function generateStoryAI(roughIdea, useDialog) {
             throw new Error(`Server Error (${response.status}): ${errText}`);
         }
         
-        // Endpoint ini mengembalikan format OpenAI (ada choices[0].message.content)
+        // Parsing cara OpenAI (karena endpointnya kompatibel OpenAI)
         const data = await response.json();
         const text = data.choices[0].message.content;
 
@@ -89,4 +92,4 @@ export async function generateStoryAI(roughIdea, useDialog) {
         console.error("Story API Error:", error);
         throw new Error(`Gagal: ${error.message}`);
     }
-             }
+}
