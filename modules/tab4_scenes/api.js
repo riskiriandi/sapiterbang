@@ -1,6 +1,6 @@
 import { AppState } from '../../core/state.js';
 
-// 1. UPLOAD KE IMGBB (Tetap sama, ini udah bener)
+// 1. UPLOAD KE IMGBB (Tetap sama)
 export async function uploadToImgBB(file, name) {
     const apiKey = AppState.config.imgbbKey;
     if (!apiKey) throw new Error("API Key ImgBB Kosong!");
@@ -19,54 +19,40 @@ export async function uploadToImgBB(file, name) {
     }
 }
 
-// 2. GENERATE SHOT (LOGIKA JIPLAK FILE TEST_DUO.HTML)
+// 2. GENERATE SHOT (VERSI POLOSAN - TANPA MANTRA)
 export async function generateShotImage(prompt, refImageUrls, model = "seedream-pro") {
     const apiKey = AppState.config.pollinationsKey;
     const styleData = AppState.style;
     
-    // A. HITUNG RASIO
+    // Auto Ratio
     let width = 1024, height = 1024;
     if (styleData.ratio === "16:9") { width = 1280; height = 720; }
     else if (styleData.ratio === "9:16") { width = 720; height = 1280; }
 
-    // B. SIAPKAN PROMPT (MANTRA + PROMPT USER)
-    let finalPromptText = prompt;
-    
-    // Kalau ada gambar, tambahin mantra biar nurut
-    if (refImageUrls) {
-        finalPromptText = `(Strict Reference Mode). The characters MUST match the provided reference images exactly. Maintain facial features 100%. Scene: ${prompt}`;
-    }
-
-    // ENCODE PROMPT (PENTING!)
-    const encodedPrompt = encodeURIComponent(finalPromptText);
+    // === PERUBAHAN: GAK ADA INJECT MANTRA ===
+    // Kita kirim prompt mentah-mentah sesuai apa yang ditulis AI Director
+    const encodedPrompt = encodeURIComponent(prompt);
     const seed = Math.floor(Math.random() * 10000);
 
-    // C. SIAPKAN URL GAMBAR (LOGIKA TEST_DUO)
+    // === LOGIKA IMAGE URL (Sesuai File Test Lu) ===
     let imageParam = "";
     if (refImageUrls) {
-        // refImageUrls bisa "url1" atau "url1,url2"
+        // Pecah koma, trim spasi, encode satu-satu, gabung koma lagi
         const urls = refImageUrls.split(',');
-        
-        // Encode satu-satu, lalu gabung koma
         const encodedUrls = urls.map(u => encodeURIComponent(u.trim())).join(',');
-        
-        // Tempel ke parameter image
         imageParam = `&image=${encodedUrls}`;
-        console.log("API: Image Param constructed:", imageParam);
     }
     
-    // D. RAKIT URL FINAL
-    // Struktur: /image/PROMPT?model=...&width=...&image=URLS
+    // RAKIT URL
+    // nologo=true, enhance=false (biar nurut)
     const url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${seed}${imageParam}`;
 
-    // E. FETCH (GET WITH HEADER)
+    // FETCH (GET dengan Header Auth)
     const headers = {};
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
         console.log(`API: Generating...`);
-        // console.log(url); // Uncomment kalau mau liat URL asli di console
-
         const response = await fetch(url, { method: 'GET', headers: headers });
         
         if (!response.ok) {
@@ -82,7 +68,7 @@ export async function generateShotImage(prompt, refImageUrls, model = "seedream-
     }
 }
 
-// 3. SMART BREAKDOWN (SAMA KEK SEBELUMNYA - BIAR GAK ERROR MISSING EXPORT)
+// 3. SMART BREAKDOWN (SAMA KEK SEBELUMNYA)
 export async function breakdownScriptAI(fullScript) {
     const apiKey = AppState.config.pollinationsKey;
     const charNames = AppState.chars.generatedChars.map(c => c.name).join(', ');
@@ -96,8 +82,9 @@ export async function breakdownScriptAI(fullScript) {
     
     INSTRUCTIONS:
     1. Break story into Scenes and Shots.
-    2. "visual_prompt": Detailed image description. INCLUDE physical descriptions.
-       - IMPORTANT: Do NOT include aspect ratio terms like "wide aspect ratio", "16:9".
+    2. "visual_prompt": Write a CONCISE visual description (Max 30 words).
+       - Focus ONLY on Action, Lighting, and Angle.
+       - Do NOT include aspect ratio terms.
     3. "characters_in_shot": List EXACT names of characters present in this shot.
     4. "video_prompt": Camera movement description.
     
@@ -109,7 +96,7 @@ export async function breakdownScriptAI(fullScript) {
                 "shots": [
                     {
                         "shot_info": "Shot 1...",
-                        "visual_prompt": "Low angle shot of Kairo climbing...",
+                        "visual_prompt": "Low angle, Kairo climbing rocky slope, sunrise lighting...",
                         "video_prompt": "Camera tracking forward...",
                         "characters_in_shot": ["Kairo", "Miri"] 
                     }
@@ -144,4 +131,4 @@ export async function breakdownScriptAI(fullScript) {
     } catch (error) {
         throw error;
     }
-}
+        }
