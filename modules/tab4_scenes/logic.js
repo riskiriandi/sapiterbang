@@ -28,19 +28,20 @@ export default function init() {
         btnAutoBreakdown.disabled = true;
 
         try {
-            // Panggil AI Director
             const result = await breakdownScriptAI(storyData.script);
             
-            // Mapping Data
             const newScenes = result.scenes.map((s, i) => ({
                 id: Date.now() + i,
                 location: s.location,
                 shots: s.shots.map((sh, j) => ({
                     id: Date.now() + i + j + 100,
                     info: sh.shot_info,
-                    visualPrompt: sh.visual_prompt, // Prompt Gambar
-                    actionPrompt: sh.video_prompt,  // Prompt Video
-                    imgUrl: null
+                    visualPrompt: sh.visual_prompt,
+                    actionPrompt: sh.video_prompt,
+                    // Simpan list karakter yang dideteksi AI
+                    charsInShot: sh.characters_in_shot || [], 
+                    imgUrl: null,
+                    refImage: null // Buat manual upload override
                 }))
             }));
 
@@ -80,9 +81,32 @@ export default function init() {
 
             scenesContainer.appendChild(sceneEl);
             
-            // Render Shots
             const shotsContainer = document.getElementById(`shots-list-${scene.id}`);
             scene.shots.forEach((shot) => {
+                // LOGIC CARI URL KARAKTER
+                // Kita cari karakter di Tab 3 yang namanya cocok dengan deteksi AI
+                const matchedUrls = [];
+                const matchedNames = [];
+                
+                if (shot.charsInShot && shot.charsInShot.length > 0) {
+                    shot.charsInShot.forEach(charName => {
+                        // Cari di AppState.chars (Case insensitive search)
+                        const charData = AppState.chars.generatedChars.find(c => c.name.toLowerCase().includes(charName.toLowerCase()) || charName.toLowerCase().includes(c.name.toLowerCase()));
+                        
+                        if (charData && charData.imgbbUrl) {
+                            matchedUrls.push(charData.imgbbUrl);
+                            matchedNames.push(charData.name);
+                        }
+                    });
+                }
+
+                // Tampilan Badge Karakter Terdeteksi
+                const charBadge = matchedNames.length > 0 
+                    ? `<div class="text-[10px] text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-500/30 flex items-center gap-1 mt-1">
+                         <i class="ph ph-link"></i> Linked: ${matchedNames.join(', ')}
+                       </div>`
+                    : `<div class="text-[10px] text-gray-500 mt-1 italic">No character linked</div>`;
+
                 const shotEl = document.createElement('div');
                 shotEl.className = "flex flex-col md:flex-row gap-4 bg-black/30 p-3 rounded-lg border border-white/5";
 
@@ -92,7 +116,7 @@ export default function init() {
                         <div class="aspect-video bg-black rounded-lg border border-white/10 flex items-center justify-center overflow-hidden relative">
                             ${shot.imgUrl 
                                 ? `<img src="${shot.imgUrl}" class="w-full h-full object-cover">` 
-                                : `<div class="text-center p-4 text-gray-600"><i class="ph ph-image text-3xl mb-1"></i><p class="text-[10px]">No Image</p></div>`
+                                : `<div class="text-center p-4 text-gray-600"><i class="ph ph-image text-3xl mb-1"></i><p class="text-[10px]">Preview</p></div>`
                             }
                             <div id="loading-${shot.id}" class="absolute inset-0 bg-black/80 hidden flex-col items-center justify-center z-10">
                                 <i class="ph ph-spinner animate-spin text-accent text-2xl"></i>
@@ -103,25 +127,22 @@ export default function init() {
 
                     <!-- KANAN: PROMPTS -->
                     <div class="w-full md:w-2/3 flex flex-col gap-2">
-                        <div class="flex justify-between">
-                            <span class="text-[10px] font-bold text-yellow-400">${shot.info || "Shot"}</span>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-[10px] font-bold text-yellow-400">${shot.info || "Shot"}</span>
+                                ${charBadge} <!-- BADGE MUNCUL DISINI -->
+                            </div>
                         </div>
 
-                        <!-- 1. Visual Prompt (Gambar) -->
+                        <!-- Visual Prompt -->
                         <div>
-                            <label class="text-[9px] text-gray-500 font-bold uppercase flex justify-between">
-                                <span>Visual Prompt (Image)</span>
-                                <i class="ph ph-pencil-simple"></i>
-                            </label>
+                            <label class="text-[9px] text-gray-500 font-bold uppercase">Visual Prompt</label>
                             <textarea id="vis-${shot.id}" class="w-full bg-black/50 text-gray-300 text-[11px] p-2 rounded border border-white/10 h-16 focus:border-accent outline-none resize-none custom-scrollbar">${shot.visualPrompt}</textarea>
                         </div>
 
-                        <!-- 2. Video Prompt (Gerakan) -->
+                        <!-- Action Prompt -->
                         <div>
-                            <label class="text-[9px] text-green-400 font-bold uppercase flex justify-between">
-                                <span>Motion Prompt (Video)</span>
-                                <i class="ph ph-video-camera"></i>
-                            </label>
+                            <label class="text-[9px] text-green-400 font-bold uppercase">Motion Prompt</label>
                             <textarea id="act-${shot.id}" class="w-full bg-black/50 text-gray-300 text-[11px] p-2 rounded border border-white/10 h-12 focus:border-green-500 outline-none resize-none custom-scrollbar">${shot.actionPrompt}</textarea>
                         </div>
 
@@ -138,7 +159,6 @@ export default function init() {
                 const visInput = document.getElementById(`vis-${shot.id}`);
                 const actInput = document.getElementById(`act-${shot.id}`);
 
-                // Auto Save Text Change
                 [visInput, actInput].forEach(inp => {
                     inp.addEventListener('change', () => {
                         shot.visualPrompt = visInput.value;
@@ -147,7 +167,7 @@ export default function init() {
                     });
                 });
 
-                // Generate Image
+                // GENERATE CLICK
                 btnGen.addEventListener('click', async () => {
                     const loading = document.getElementById(`loading-${shot.id}`);
                     loading.classList.remove('hidden');
@@ -155,7 +175,23 @@ export default function init() {
                     btnGen.disabled = true;
 
                     try {
-                        const blob = await generateShotImage(visInput.value);
+                        // LOGIC PENGGABUNGAN URL
+                        // Prioritas: 
+                        // 1. Manual Upload (shot.refImage) -> Kalau user mau override
+                        // 2. Auto Detected Characters (matchedUrls) -> Kalau normal
+                        
+                        let refUrls = null;
+                        
+                        if (shot.refImage) {
+                            refUrls = shot.refImage; // Manual override
+                        } else if (matchedUrls.length > 0) {
+                            refUrls = matchedUrls.join(','); // Gabungan URL Karakter (Koma separated)
+                        }
+
+                        // Generate
+                        const blob = await generateShotImage(visInput.value, refUrls);
+                        
+                        // Upload Result
                         const upload = await uploadToImgBB(blob, `shot_${shot.id}`);
                         
                         shot.imgUrl = upload.url;
@@ -174,7 +210,6 @@ export default function init() {
         });
     }
 
-    // Delete Helper
     window.deleteScene = (idx) => {
         if(confirm("Hapus Scene?")) {
             const scenes = SceneState.get().scenes;
@@ -184,11 +219,10 @@ export default function init() {
         }
     };
     
-    // Clear All
-    btnClear.addEventListener('click', () => {
+    document.getElementById('btn-clear-scenes').addEventListener('click', () => {
         if(confirm("Reset semua timeline?")) {
             SceneState.update({ scenes: [] });
             renderScenes();
         }
     });
-            }
+                                      }
