@@ -57,16 +57,18 @@ export default function init() {
             const existingData = savedState.generatedChars.find(c => c.name === char.name);
             const imageUrl = existingData ? existingData.imgbbUrl : null;
             
-            // Prompt Gabungan
+            // RUMUS BARU: KARAKTER PRIORITAS UTAMA
+            // Kita taruh Style di belakang, dan kita kasih "Pagar" biar AI gak bawa background dari style.
+            
             const defaultPrompt = `
-${styleData.masterPrompt || "Cinematic lighting"}. 
-Character: ${char.name}. ${char.desc}. 
-(FULL BODY SHOT), standing upright, looking at camera.
-**BACKGROUND: Solid neutral grey studio background, simple, clean, no details, flat color.**
-(Reason: To ensure character consistency for future scene generation).
-High resolution, 8k, sharp focus.
-`.trim();
+(SUBJECT): ${char.name}. ${char.desc}. 
+(POSE): Standing upright, Full Body Shot, looking at camera.
+(SETTING): **Solid neutral grey studio background. Minimalist. No props, no environment, no grass, no dirt.**
 
+(RENDER STYLE): ${styleData.masterPrompt || "Cinematic lighting"}.
+**IMPORTANT override:** Apply the lighting, texture, and render quality from the style above, BUT IGNORE any background elements (like grass, bark, buildings) or camera angles mentioned in the style. Keep the background strictly SOLID GREY.
+            `.trim();
+            
             const card = document.createElement('div');
             card.className = "glass-panel rounded-xl overflow-hidden flex flex-col group border border-white/5 hover:border-accent/30 transition-all";
             
