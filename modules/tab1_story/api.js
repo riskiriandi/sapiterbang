@@ -4,38 +4,51 @@ export async function generateStoryAI(roughIdea, useDialog) {
     
     const apiKey = AppState.config.pollinationsKey ? AppState.config.pollinationsKey.trim() : null;
 
-    // Mode Instruksi
-    let styleInstruction = useDialog 
-        ? "STYLE: Screenplay/Naskah Film (Focus on Dialogue & Action)." 
-        : "STYLE: Novel/Narasi (Focus on Atmosphere & Description).";
+    // 1. INSTRUKSI GAYA PENULISAN (LEBIH TEGAS)
+    let styleInstruction = "";
+    
+    if (useDialog) {
+        // MODE NASKAH / DIALOG
+        styleInstruction = `
+        MODE: SCRIPT / SCREENPLAY.
+        - Format: Use standard script format (Scene Headings, Character Names, Dialogue).
+        - Focus: Interaction and spoken words.
+        - Example: 
+          RYO: "Cepat lari!"
+          MIKA: "Baik!"
+        `;
+    } else {
+        // MODE NOVEL / NARASI (INI YANG LU MAU)
+        styleInstruction = `
+        MODE: NOVEL / NARRATIVE FICTION.
+        - Format: Write in flowing paragraphs.
+        - FORBIDDEN: Do NOT use script format (No "Character: Dialogue").
+        - Focus: Describe actions, internal thoughts, atmosphere, and sensory details (smell, touch, sight).
+        - Instead of dialogue, describe the intent. (e.g., "Ryo gestured for Mika to follow him," instead of Ryo saying "Follow me").
+        `;
+    }
 
-    // SYSTEM PROMPT: SMART SEGMENTATION
+    // 2. SYSTEM PROMPT
     const systemPrompt = `
-    ROLE: Professional Storyboard Writer & Visualizer.
+    ROLE: Best-Selling Novelist & Creative Writer.
     LANGUAGE: Story in INDONESIAN. Visual Notes in ENGLISH.
     
     ${styleInstruction}
     
     TASK:
-    1. Write a story based on the user idea.
-    2. BREAK DOWN the story into logical "VISUAL SEGMENTS" (Chunks).
+    1. Expand the user's rough idea into a compelling story.
+    2. Divide the story into logical PARAGRAPHS (Segments).
     
-    RULES FOR SEGMENTATION:
-    - Group sentences that belong to the SAME visual shot/moment.
-    - Example: "Fajar menyingsing. 3 orang mendaki." -> This is ONE segment (Wide Shot).
-    - Example: "Ryo kedinginan. Bulunya berdiri." -> This is ONE segment (Focus Shot).
-    - If there is dialogue, put it in its own segment.
-
     SPECIAL RULE: "HUMANOID KUCING"
-    - Describe them as: "Anthropomorphic feline head, humanoid body with fine fur".
+    - If mentioned, visualize them as: "Anthropomorphic feline head, humanoid body covered in fine fur, expressive tail/ears."
 
     OUTPUT JSON FORMAT ONLY:
     {
         "segments": [
             {
-                "type": "ESTABLISHING" (or ACTION / DIALOGUE / FOCUS),
-                "text": "Teks naskah bahasa Indonesia...",
-                "visual_note": "Brief English visual description (e.g., Wide shot of sunrise, silhouettes of 3 characters)"
+                "type": "NARRATIVE" (or DIALOGUE if mode is ON),
+                "text": "Tulis paragraf cerita yang indah dan detail disini...",
+                "visual_note": "Brief English visual description for Illustrator (e.g., Close up of Ryo's trembling hand, misty mountain background)"
             }
         ],
         "characters": [
@@ -48,7 +61,7 @@ export async function generateStoryAI(roughIdea, useDialog) {
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     const payload = {
-        model: "openai", // Pakai model text yang pinter logika
+        model: "openai", 
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `USER IDEA: ${roughIdea}` }
@@ -57,7 +70,8 @@ export async function generateStoryAI(roughIdea, useDialog) {
     };
 
     try {
-        console.log("API: Sending Smart Segment Request...");
+        console.log("API: Generating Story (Mode: " + (useDialog ? "Dialog" : "Novel") + ")...");
+        
         const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
             method: 'POST',
             headers: headers,
@@ -73,14 +87,10 @@ export async function generateStoryAI(roughIdea, useDialog) {
         const text = data.choices[0].message.content;
         const cleanText = text.replace(/```json|```/g, '').trim();
         
-        // Validasi JSON
-        const result = JSON.parse(cleanText);
-        if(!result.segments || !result.characters) throw new Error("Format JSON AI salah.");
-
-        return result;
+        return JSON.parse(cleanText);
 
     } catch (error) {
         console.error("Story API Error:", error);
         throw new Error(`Gagal: ${error.message}`);
     }
-        }
+}
