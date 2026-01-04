@@ -4,34 +4,28 @@ const LOCAL_KEY = 'MrG_Tab4_Data';
 export const SceneState = {
     data: {
         scenes: [] 
-        // Struktur Scene:
-        // {
-        //    id: 1,
-        //    locationPrompt: "Kitchen, night time...",
-        //    shots: [
-        //       { 
-        //         id: 1, 
-        //         type: "master", 
-        //         visualPrompt: "...", 
-        //         actionPrompt: "...", 
-        //         imgbbUrl: "...",
-        //         referenceImage: "..." (URL Screenshot yg diupload user)
-        //       }
-        //    ]
-        // }
     },
 
     init() {
         const saved = localStorage.getItem(LOCAL_KEY);
-        if (saved) this.data = JSON.parse(saved);
+        if (saved) {
+            try {
+                this.data = JSON.parse(saved);
+            } catch (e) {
+                console.error("Gagal load scene data", e);
+            }
+        }
     },
 
-    // Fungsi nambah scene/shot, update prompt, simpan gambar
-    update(payload) {
-        // Logic update state yang fleksibel (mirip Tab 3)
+    // PERBAIKAN DISINI: Tambah parameter default "payload = {}"
+    // Jadi kalau dipanggil kosongan, dia gak error.
+    update(payload = {}) {
+        // Cek apakah ada data scenes baru yang dikirim?
         if (payload.scenes) {
             this.data.scenes = payload.scenes;
         }
+        
+        // Kalau payload kosong, dia tetap lanjut nge-save data yang ada di memori
         this.save();
     },
 
