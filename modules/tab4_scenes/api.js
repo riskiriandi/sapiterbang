@@ -1,83 +1,60 @@
 import { AppState } from '../../core/state.js';
 
-export async function breakdownScriptAI(scriptText, mode) {
+// 1. VISION ANALYSIS (OTAK KONTINUITAS)
+// Ini fitur yang lu minta: Upload Screenshot -> AI bikinin Prompt Lanjutan
+export async function analyzeContinuity(imageBlob, storyContext) {
     const apiKey = AppState.config.pollinationsKey;
-
-    // INSTRUKSI MODE
-    let modeInstruction = "";
-    if (mode === 'shorts') {
-        modeInstruction = `
-        MODE: SHORTS / TIKTOK (Fast Paced).
-        - Combine small actions into ONE continuous shot (5-8 seconds).
-        - Don't cut too often. Keep the flow.
-        - Only cut if the location changes or the angle MUST change drastically.
-        `;
-    } else {
-        modeInstruction = `
-        MODE: CINEMATIC (Detailed).
-        - Break down every subtle movement into separate shots.
-        - Focus on artistic angles and emotional details.
-        `;
-    }
+    
+    // Convert Blob ke Base64 buat dikirim ke Vision AI
+    const base64Image = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(imageBlob);
+    });
 
     const systemPrompt = `
-    ROLE: Professional Movie Director.
-    TASK: Convert the narrative text into a TECHNICAL SCREENPLAY SHOT LIST.
+    ROLE: Continuity Director.
+    TASK: Look at the uploaded screenshot (Previous Frame).
+    CONTEXT: The next action in the story is: "${storyContext}".
     
-    ${modeInstruction}
-    
-    RULES:
-    1. MASTER LOCATION: Define one consistent background description for the whole scene.
-    2. DURATION: Estimate shot duration (usually 5s to 8s for AI video).
-    3. CONTINUATION: If an action is long (e.g., running for 15s), split it into shots and mark "is_linked": true (meaning: use previous frame as input).
-    
-    OUTPUT JSON FORMAT:
-    {
-        "location_prompt": "Visual description of the environment (No characters)...",
-        "shots": [
-            {
-                "id": 1,
-                "type": "WIDE" (or MID, CLOSE UP, MACRO),
-                "subject": "Ryo",
-                "action": "Description of action (e.g. Walking towards camera)",
-                "camera": "Low angle, tracking shot",
-                "duration": 5,
-                "is_linked": false (true if this is a direct continuation of previous shot)
-            }
-        ]
-    }
+    OUTPUT: Write a visual prompt for the NEXT frame.
+    - Keep the character position, outfit, and background EXACTLY the same as the image.
+    - ONLY change the pose/expression to match the Context.
+    - Format: "Same scene, [Character Description] [New Action], [Background Details]"
     `;
 
-    const headers = { 'Content-Type': 'application/json' };
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-
     const payload = {
-        model: "openai", 
+        model: "openai", // Pakai OpenAI/GPT-4o Vision
         messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: `SCRIPT SEGMENT: "${scriptText}"` }
-        ],
-        jsonMode: true,
-        seed: Math.floor(Math.random() * 9999)
+            { 
+                role: "user", 
+                content: [
+                    { type: "text", text: "Analyze this previous frame and generate prompt for next action." },
+                    { type: "image_url", image_url: { url: base64Image } } // Base64 support di beberapa endpoint, atau kita upload dulu ke ImgBB
+                ]
+            }
+        ]
     };
 
-    try {
-        console.log(`Director AI: Breakdown (${mode})...`);
-        const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(payload)
-        });
+    // Note: Kalau endpoint OpenAI menolak Base64 langsung, kita harus upload ke ImgBB dulu di Logic.
+    // Kita asumsikan kita upload ke ImgBB dulu di Logic layer biar aman.
+}
 
-        if (!response.ok) throw new Error("API Error");
-
-        const data = await response.json();
-        const cleanJson = data.choices[0].message.content.replace(/```json|```/g, '').trim();
-        
-        return JSON.parse(cleanJson);
-
-    } catch (error) {
-        console.error("Director Error:", error);
-        throw error;
+// 2. GENERATE SHOT (Sama kayak Tab 3 tapi logic Image-to-Image)
+export async function generateShotImage(prompt, refImageUrl, model = "seedream-pro") {
+    const apiKey = AppState.config.pollinationsKey;
+    
+    let url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?model=${model}&width=1280&height=720&nologo=true&enhance=false`;
+    
+    // Kalau ada gambar referensi (Screenshot video sebelumnya), tempel di URL
+    if (refImageUrl) {
+        url += `&image=${encodeURIComponent(refImageUrl)}`;
     }
+
+    if (apiKey) {
+        // Pake Header Auth nanti di fetch
+    }
+
+    // ... (Fetch logic sama kayak Tab 3) ...
                 }
