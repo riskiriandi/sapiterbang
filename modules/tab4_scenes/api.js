@@ -1,60 +1,94 @@
 import { AppState } from '../../core/state.js';
 
-// 1. VISION ANALYSIS (OTAK KONTINUITAS)
-// Ini fitur yang lu minta: Upload Screenshot -> AI bikinin Prompt Lanjutan
-export async function analyzeContinuity(imageBlob, storyContext) {
-    const apiKey = AppState.config.pollinationsKey;
+// 1. UPLOAD KE IMGBB (Durasi 1 Minggu)
+export async function uploadToImgBB(file, name) {
+    const apiKey = AppState.config.imgbbKey;
     
-    // Convert Blob ke Base64 buat dikirim ke Vision AI
-    const base64Image = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(imageBlob);
-    });
+    if (!apiKey) {
+        throw new Error("API Key ImgBB Kosong! Cek Settings.");
+    }
 
-    const systemPrompt = `
-    ROLE: Continuity Director.
-    TASK: Look at the uploaded screenshot (Previous Frame).
-    CONTEXT: The next action in the story is: "${storyContext}".
-    
-    OUTPUT: Write a visual prompt for the NEXT frame.
-    - Keep the character position, outfit, and background EXACTLY the same as the image.
-    - ONLY change the pose/expression to match the Context.
-    - Format: "Same scene, [Character Description] [New Action], [Background Details]"
-    `;
+    const formData = new FormData();
+    formData.append("image", file, name);
 
-    const payload = {
-        model: "openai", // Pakai OpenAI/GPT-4o Vision
-        messages: [
-            { role: "system", content: systemPrompt },
-            { 
-                role: "user", 
-                content: [
-                    { type: "text", text: "Analyze this previous frame and generate prompt for next action." },
-                    { type: "image_url", image_url: { url: base64Image } } // Base64 support di beberapa endpoint, atau kita upload dulu ke ImgBB
-                ]
-            }
-        ]
-    };
+    try {
+        console.log("API: Uploading screenshot to ImgBB...");
+        // Expiration: 604800 detik (1 Minggu)
+        const response = await fetch(`https://api.imgbb.com/1/upload?expiration=604800&key=${apiKey}`, {
+            method: "POST",
+            body: formData
+        });
 
-    // Note: Kalau endpoint OpenAI menolak Base64 langsung, kita harus upload ke ImgBB dulu di Logic.
-    // Kita asumsikan kita upload ke ImgBB dulu di Logic layer biar aman.
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error("ImgBB Failed: " + (result.error ? result.error.message : "Unknown error"));
+        }
+
+        return {
+            url: result.data.url,
+            deleteUrl: result.data.delete_url
+        };
+
+    } catch (error) {
+        console.error("Upload Error:", error);
+        throw error;
+    }
 }
 
-// 2. GENERATE SHOT (Sama kayak Tab 3 tapi logic Image-to-Image)
+// 2. GENERATE SHOT (Support Img2Img & Auto Ratio)
 export async function generateShotImage(prompt, refImageUrl, model = "seedream-pro") {
     const apiKey = AppState.config.pollinationsKey;
     
-    let url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?model=${model}&width=1280&height=720&nologo=true&enhance=false`;
+    // A. HITUNG RASIO OTOMATIS (Ambil dari Tab 2)
+    const styleData = AppState.style;
+    let width = 1024;
+    let height = 1024;
+
+    if (styleData && styleData.ratio === "16:9") {
+        width = 1280; height = 720;
+    } else if (styleData && styleData.ratio === "9:16") {
+        width = 720; height = 1280;
+    }
+    // Kalau 1:1 tetap 1024
+
+    // B. RAKIT URL
+    const encodedPrompt = encodeURIComponent(prompt);
+    const seed = Math.floor(Math.random() * 10000);
     
-    // Kalau ada gambar referensi (Screenshot video sebelumnya), tempel di URL
+    let url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${seed}`;
+
+    // C. FITUR ESTAFET (Img2Img)
+    // Kalau ada gambar referensi (Screenshot), tempel di URL
     if (refImageUrl) {
+        console.log("API: Using Reference Image for Consistency");
         url += `&image=${encodeURIComponent(refImageUrl)}`;
     }
 
+    // D. FETCH (Pake Header Auth biar URL gak kepanjangan)
+    const headers = {};
     if (apiKey) {
-        // Pake Header Auth nanti di fetch
+        headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    // ... (Fetch logic sama kayak Tab 3) ...
-                }
+    try {
+        console.log(`API: Generating Shot (${width}x${height})...`);
+        
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Gen Error (${response.status}): ${errText}`);
+        }
+        
+        const blob = await response.blob();
+        return blob;
+
+    } catch (error) {
+        console.error("Generate Shot Error:", error);
+        throw error;
+    }
+        }
