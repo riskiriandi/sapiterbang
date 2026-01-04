@@ -4,18 +4,21 @@ const LOCAL_KEY = 'MrG_Tab4_Data';
 export const SceneState = {
     data: {
         scenes: [] 
-        // Struktur Data:
-        // [
-        //   {
-        //     id: 1712345678, (Timestamp ID)
-        //     sourceText: "Ryo berjalan...",
-        //     locationPrompt: "Interior gudang tua...",
-        //     shots: [
-        //       { type: "WIDE", subject: "Ryo", action: "Berjalan", focus: "Full Body" },
-        //       { type: "MACRO", subject: "Kaki", action: "Injak kaca", focus: "Boots detail" }
-        //     ]
-        //   }
-        // ]
+        // Struktur Scene:
+        // {
+        //    id: 1,
+        //    locationPrompt: "Kitchen, night time...",
+        //    shots: [
+        //       { 
+        //         id: 1, 
+        //         type: "master", 
+        //         visualPrompt: "...", 
+        //         actionPrompt: "...", 
+        //         imgbbUrl: "...",
+        //         referenceImage: "..." (URL Screenshot yg diupload user)
+        //       }
+        //    ]
+        // }
     },
 
     init() {
@@ -23,24 +26,12 @@ export const SceneState = {
         if (saved) this.data = JSON.parse(saved);
     },
 
-    // Tambah Scene Baru
-    addScene(sceneObj) {
-        this.data.scenes.push(sceneObj);
-        this.save();
-    },
-
-    // Update Scene (Misal ganti lokasi)
-    updateScene(id, newData) {
-        const index = this.data.scenes.findIndex(s => s.id === id);
-        if (index >= 0) {
-            this.data.scenes[index] = { ...this.data.scenes[index], ...newData };
-            this.save();
+    // Fungsi nambah scene/shot, update prompt, simpan gambar
+    update(payload) {
+        // Logic update state yang fleksibel (mirip Tab 3)
+        if (payload.scenes) {
+            this.data.scenes = payload.scenes;
         }
-    },
-
-    // Hapus Scene
-    deleteScene(id) {
-        this.data.scenes = this.data.scenes.filter(s => s.id !== id);
         this.save();
     },
 
@@ -49,6 +40,6 @@ export const SceneState = {
     },
 
     get() {
-        return this.data.scenes;
+        return this.data;
     }
 };
