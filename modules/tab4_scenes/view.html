@@ -1,31 +1,30 @@
 <div class="animate-fade-in w-full h-full flex flex-col md:flex-row gap-4 pb-20 px-2">
     
-    <!-- PANEL KIRI: NASKAH (Sticky) -->
+    <!-- KIRI: NASKAH -->
     <div class="w-full md:w-1/3 glass-panel p-4 rounded-xl h-[300px] md:h-[80vh] overflow-y-auto sticky top-4">
         <h3 class="text-accent font-bold mb-4 flex items-center gap-2">
             <i class="ph ph-scroll"></i> Master Script
         </h3>
-        <div id="script-display" class="text-sm text-gray-300 font-serif leading-relaxed whitespace-pre-wrap">
-            <!-- Naskah dari Tab 1 muncul disini -->
-            (Belum ada naskah. Generate di Tab 1 dulu)
+        <div id="script-display" class="text-sm text-gray-300 font-serif leading-relaxed whitespace-pre-wrap mb-4">
+            (Loading...)
         </div>
+        <button id="btn-auto-breakdown" class="w-full btn-pro btn-pro-primary justify-center py-3 text-xs font-bold uppercase tracking-wider shadow-lg shadow-accent/20">
+            <i class="ph ph-film-slate text-lg"></i> AI Director Breakdown
+        </button>
     </div>
 
-    <!-- PANEL KANAN: TIMELINE SHOT -->
+    <!-- KANAN: TIMELINE -->
     <div class="w-full md:w-2/3 space-y-6">
-        
-        <!-- Toolbar Scene -->
         <div class="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/10">
-            <h2 class="text-xl font-bold text-white">Storyboard Timeline</h2>
-            <button id="btn-add-scene" class="btn-pro btn-pro-primary text-xs">
-                <i class="ph ph-plus"></i> New Scene
-            </button>
+            <h2 class="text-xl font-bold text-white">Shot List</h2>
+            <button id="btn-clear-scenes" class="text-red-500 text-xs hover:text-white px-3 py-1 border border-red-500/30 rounded">Reset</button>
         </div>
 
-        <!-- Container Scene (Disini Shot-shot akan beranak pinak) -->
-        <div id="scenes-container" class="space-y-8">
-            <!-- Scene Card Template (Nanti di-inject JS) -->
+        <div id="scenes-container" class="space-y-8 min-h-[200px]">
+            <div id="empty-timeline" class="flex flex-col items-center justify-center h-64 text-gray-600 border-2 border-dashed border-white/5 rounded-xl">
+                <i class="ph ph-film-strip text-4xl mb-2"></i>
+                <p class="text-xs">Klik "AI Director Breakdown" untuk mulai</p>
+            </div>
         </div>
-
     </div>
-        </div>
+    </div>
