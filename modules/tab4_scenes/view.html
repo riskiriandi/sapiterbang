@@ -1,0 +1,46 @@
+<div class="animate-fade-in w-full h-full flex flex-col md:flex-row gap-6 pb-20">
+    
+    <!-- PANEL KIRI: NASKAH SUMBER (30%) -->
+    <div class="w-full md:w-1/3 flex flex-col gap-4">
+        <div class="glass-panel p-4 rounded-xl sticky top-0 z-10 border-b border-white/10">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="ph ph-scroll text-accent"></i> Script Source
+            </h2>
+            <p class="text-xs text-gray-400">Pilih paragraf untuk dijadikan Scene.</p>
+        </div>
+        
+        <!-- Container Naskah (Scrollable) -->
+        <div id="script-source-container" class="space-y-4 overflow-y-auto max-h-[70vh] pr-2 custom-scrollbar">
+            <!-- Paragraf dari Tab 1 akan muncul disini -->
+            <div class="text-center text-gray-500 py-10">
+                <i class="ph ph-spinner animate-spin"></i> Loading Script...
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL KANAN: TIMELINE DIRECTOR (70%) -->
+    <div class="w-full md:w-2/3 flex flex-col gap-4">
+        <div class="glass-panel p-4 rounded-xl flex justify-between items-center sticky top-0 z-10 border-b border-white/10 backdrop-blur-xl">
+            <div>
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="ph ph-film-strip text-accent"></i> Scene Director
+                </h2>
+                <p class="text-xs text-gray-400">Susun shot list sebelum produksi.</p>
+            </div>
+            <button id="btn-next-tab" class="btn-pro bg-white text-black text-xs px-4 py-2 rounded-lg font-bold">
+                Lanjut ke Produksi <i class="ph ph-arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- Container Timeline (Tempat Scene & Shot) -->
+        <div id="timeline-container" class="space-y-8 pb-20">
+            <!-- Scene Card akan ditambahkan disini -->
+            <div id="empty-timeline" class="text-center py-20 border-2 border-dashed border-white/10 rounded-xl">
+                <i class="ph ph-film-slate text-5xl text-gray-600 mb-2"></i>
+                <p class="text-gray-400 text-sm">Timeline Kosong.</p>
+                <p class="text-gray-500 text-xs">Klik tombol <span class="text-accent font-bold">+ Create Scene</span> di panel kiri.</p>
+            </div>
+        </div>
+    </div>
+
+  </div>
