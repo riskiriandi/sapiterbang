@@ -1,29 +1,34 @@
 import { AppState } from '../../core/state.js';
 
-// 1. ANALYZE PROPS ONLY (Karakter ambil dari Tab 1)
+// 1. ANALYZE ASSET NEEDS (VERSI: CHARACTER PARTS ONLY)
 export async function analyzePropsAI(scriptData) {
     const apiKey = AppState.config.pollinationsKey;
     const scriptString = JSON.stringify(scriptData, null, 2);
+    
+    // Ambil nama karakter biar AI tau siapa yang harus diperhatiin
+    const charNames = AppState.story.characters.map(c => c.name).join(', ');
 
     const systemPrompt = `
-    ROLE: Prop Master.
-    TASK: Analyze the Screenplay and list IMPORTANT PROPS or BODY PART CLOSE-UPS needed.
+    ROLE: Continuity Supervisor.
+    TASK: Analyze the Screenplay and list SPECIFIC VISUAL REFERENCES needed for CHARACTERS only.
+    CHARACTERS: ${charNames}
     
-    INSTRUCTIONS:
-    - DO NOT list main characters (we already have them).
-    - ONLY list objects (e.g., "Torn Map", "Glowing Crystal") or specific body parts mentioned in close-ups (e.g., "Trembling Hand", "Muddy Boots").
-    - Provide a detailed visual description for each prop.
+    CRITICAL FILTERING RULES:
+    1. INCLUDE: Specific Body Parts mentioned in Close-Ups (e.g., "Lila's Feet", "Ryo's Hand", "Aiden's Eyes").
+    2. INCLUDE: Specific Costume Details/Damage (e.g., "Aiden's Torn Shirt", "Muddy Boots").
+    3. IGNORE: Generic Props that are NOT attached to a character (e.g., "Falling Cup", "Door opening", "Trees"). Let the renderer handle those.
+    4. IGNORE: Standard Full Body shots (We already have the main character model).
     
     OUTPUT JSON FORMAT:
     {
-        "props": [
+        "assets": [
             {
-                "name": "Torn Map",
-                "desc": "A vintage topographic map, slightly torn in the middle, yellowed paper texture, detailed ink lines."
+                "name": "Lila's Hiking Boots",
+                "reason": "Close up shot in Scene 1"
             },
             {
-                "name": "Lila's Boots (Close Up)",
-                "desc": "Extreme close up of lightweight waterproof charcoal ankle boots with quick-lace hooks, covered in mud."
+                "name": "Aiden's Trembling Hand",
+                "reason": "Holding map in Scene 2"
             }
         ]
     }
@@ -43,12 +48,12 @@ export async function analyzePropsAI(scriptData) {
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
-        console.log("API: Analyzing Props...");
+        console.log("API: Filtering Character Assets...");
         const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
             method: 'POST', headers: headers, body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error("Prop Analysis Failed");
+        if (!response.ok) throw new Error("Analysis Failed");
         
         const data = await response.json();
         const text = data.choices[0].message.content.replace(/```json|```/g, '').trim();
@@ -59,13 +64,11 @@ export async function analyzePropsAI(scriptData) {
     }
 }
 
-// 2. GENERATE IMAGE (Murni nerima prompt jadi)
+// 2. GENERATE IMAGE (Sama)
 export async function generateCharImage(prompt, model, width = 1024, height = 1024) {
     const apiKey = AppState.config.pollinationsKey;
     const encodedPrompt = encodeURIComponent(prompt);
-    
     let url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${Math.floor(Math.random() * 10000)}`;
-    
     if (apiKey) url += `&key=${apiKey}`;
 
     try {
@@ -75,7 +78,7 @@ export async function generateCharImage(prompt, model, width = 1024, height = 10
     } catch (error) { throw error; }
 }
 
-// 3. UPLOAD IMGBB
+// 3. UPLOAD IMGBB (Sama)
 export async function uploadToImgBB(imageBlob, name) {
     const apiKey = AppState.config.imgbbKey;
     if (!apiKey) throw new Error("API Key ImgBB Kosong!");
