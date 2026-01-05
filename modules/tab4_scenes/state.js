@@ -3,13 +3,8 @@ const LOCAL_KEY = 'MrG_Tab4_Data';
 
 export const SceneState = {
     data: {
-        scenes: [] 
-        // Struktur Scene:
-        // {
-        //    id: 1,
-        //    location: "...",
-        //    shots: [ ... ]
-        // }
+        scenes: [],
+        storySignature: "" // <--- FITUR BARU: Buat nyatet judul/ide cerita terakhir
     },
 
     init() {
@@ -19,17 +14,15 @@ export const SceneState = {
                 this.data = JSON.parse(saved);
             } catch (e) {
                 console.error("Gagal load scene data", e);
-                // Kalau data rusak, reset ke default
-                this.data = { scenes: [] };
+                this.data = { scenes: [], storySignature: "" };
             }
         }
     },
 
-    // PERBAIKAN PENTING: Default parameter biar gak error kalau dipanggil kosongan
     update(payload = {}) {
-        if (payload.scenes) {
-            this.data.scenes = payload.scenes;
-        }
+        if (payload.scenes) this.data.scenes = payload.scenes;
+        if (payload.storySignature) this.data.storySignature = payload.storySignature; // <--- SIMPAN SIGNATURE
+        
         this.save();
     },
 
