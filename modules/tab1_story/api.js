@@ -1,96 +1,115 @@
 import { AppState } from '../../core/state.js';
 
-export async function generateStoryAI(roughIdea, useDialog) {
+// === FASE 1: KONSEP & KARAKTER (ANTI-NYEKER) ===
+export async function generateStoryConcept(idea) {
+    const apiKey = AppState.config.pollinationsKey;
     
-    const apiKey = AppState.config.pollinationsKey ? AppState.config.pollinationsKey.trim() : null;
-
-    // 1. INSTRUKSI GAYA PENULISAN (LEBIH TEGAS)
-    let styleInstruction = "";
-    
-    if (useDialog) {
-        // MODE NASKAH / DIALOG
-        styleInstruction = `
-        MODE: SCRIPT / SCREENPLAY.
-        - Format: Use standard script format (Scene Headings, Character Names, Dialogue).
-        - Focus: Interaction and spoken words.
-        - Example: 
-          RYO: "Cepat lari!"
-          MIKA: "Baik!"
-        `;
-    } else {
-        // MODE NOVEL / NARASI (INI YANG LU MAU)
-        styleInstruction = `
-        MODE: NOVEL / NARRATIVE FICTION.
-        - Format: Write in flowing paragraphs.
-        - FORBIDDEN: Do NOT use script format (No "Character: Dialogue").
-        - Focus: Describe actions, internal thoughts, atmosphere, and sensory details (smell, touch, sight).
-        - Instead of dialogue, describe the intent. (e.g., "Ryo gestured for Mika to follow him," instead of Ryo saying "Follow me").
-        `;
-    }
-
-    // 2. SYSTEM PROMPT
     const systemPrompt = `
-    ROLE: Best-Selling Novelist & Creative Writer.
-    LANGUAGE: Story in INDONESIAN. Visual Notes in ENGLISH.
+    ROLE: Character Designer & Novelist.
+    TASK: Develop a story concept and define characters based on user idea.
     
-    ${styleInstruction}
+    CRITICAL CHARACTER RULES (STRICT):
+    1. ANATOMY: Characters are "Stylized Anthropomorphic" (Furry style). Humanoid body proportions.
+       - Head: Expressive animal-like but distinct from feral animals.
+       - Body: Fully Humanoid structure (shoulders, arms, hands with fingers).
+    2. OUTFIT: Characters MUST wear full clothing.
+       - FOOTWEAR IS MANDATORY: Characters MUST wear shoes, boots, or sneakers. NO BARE PAWS/FEET allowed.
+       - Describe specific footwear (e.g., "heavy combat boots", "white sneakers").
     
-    TASK:
-    1. Expand the user's rough idea into a compelling story.
-    2. Divide the story into logical PARAGRAPHS (Segments).
-    
-    SPECIAL RULE: "HUMANOID KUCING"
-    - If mentioned, visualize them as: "Anthropomorphic feline head, humanoid body covered in fine fur, expressive tail/ears."
-
-    OUTPUT JSON FORMAT ONLY:
+    OUTPUT JSON:
     {
-        "segments": [
-            {
-                "type": "NARRATIVE" (or DIALOGUE if mode is ON),
-                "text": "Tulis paragraf cerita yang indah dan detail disini...",
-                "visual_note": "Brief English visual description for Illustrator (e.g., Close up of Ryo's trembling hand, misty mountain background)"
-            }
-        ],
+        "synopsis": "Short story summary (Indonesian)...",
         "characters": [
-            { "name": "Name", "desc": "Full English visual description..." }
+            {
+                "name": "Name",
+                "desc": "Full English visual description. Include: Species, Fur Color, Body Type, CLOTHING (Top & Bottom), and FOOTWEAR."
+            }
         ]
     }
     `;
 
+    const payload = {
+        model: "openai", // Pakai OpenAI/Claude (via Pollinations)
+        messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `IDEA: ${idea}` }
+        ],
+        jsonMode: true,
+        seed: Math.floor(Math.random() * 10000)
+    };
+
+    return await callAI(payload, apiKey);
+}
+
+// === FASE 2: SKENARIO & TIMING (DYNAMIC PACING) ===
+export async function generateScreenplay(storyContext, charData, duration) {
+    const apiKey = AppState.config.pollinationsKey;
+    
+    // Format karakter biar AI tau siapa mereka
+    const charList = charData.map(c => `${c.name}: ${c.desc}`).join('\n');
+
+    const systemPrompt = `
+    ROLE: Professional Screenwriter & Video Editor.
+    TASK: Convert the story into a Video Script with precise timing.
+    TARGET DURATION: Approx ${duration} seconds.
+    
+    TIMING RULES (DYNAMIC PACING):
+    - Do NOT make every shot the same length.
+    - Fast actions / Reactions / Quick cuts = 1-2 seconds.
+    - Normal actions / Dialogue = 3-4 seconds.
+    - Establishing shots / Scenery / Slow moments = Max 6 seconds.
+    - Total duration must sum up close to ${duration}s.
+
+    OUTPUT JSON:
+    {
+        "title": "Judul Video",
+        "scenes": [
+            {
+                "timestamp": "00:00-00:04",
+                "duration": 4,
+                "location": "Kitchen",
+                "visual": "Wide shot of Ryo entering...",
+                "audio": "Footsteps..."
+            },
+            {
+                "timestamp": "00:04-00:05",
+                "duration": 1,
+                "location": "Kitchen",
+                "visual": "Quick cut: Glass slipping from hand...",
+                "audio": "Shattering sound..."
+            }
+        ]
+    }
+    `;
+
+    const payload = {
+        model: "openai",
+        messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: `STORY:\n${storyContext}\n\nCHARACTERS:\n${charList}` }
+        ],
+        jsonMode: true,
+        seed: Math.floor(Math.random() * 10000)
+    };
+
+    return await callAI(payload, apiKey);
+}
+
+// --- HELPER FETCH ---
+async function callAI(payload, apiKey) {
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-    const payload = {
-        model: "openai", 
-        messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: `USER IDEA: ${roughIdea}` }
-        ],
-        seed: Math.floor(Math.random() * 99999)
-    };
-
     try {
-        console.log("API: Generating Story (Mode: " + (useDialog ? "Dialog" : "Novel") + ")...");
-        
         const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(payload)
+            method: 'POST', headers: headers, body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-            const errText = await response.text();
-            throw new Error(`Server Error (${response.status}): ${errText}`);
-        }
-        
+        if (!response.ok) throw new Error("AI Error");
         const data = await response.json();
-        const text = data.choices[0].message.content;
-        const cleanText = text.replace(/```json|```/g, '').trim();
-        
-        return JSON.parse(cleanText);
-
+        const text = data.choices[0].message.content.replace(/```json|```/g, '').trim();
+        return JSON.parse(text);
     } catch (error) {
-        console.error("Story API Error:", error);
-        throw new Error(`Gagal: ${error.message}`);
+        throw error;
     }
-}
+                         }
