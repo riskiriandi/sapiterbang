@@ -1,35 +1,29 @@
 import { AppState } from '../../core/state.js';
 
-// 1. ANALYZE ASSETS (DENGAN LOGIC HUMANOID KETAT)
-export async function analyzeAssetsAI(scriptData) {
+// 1. ANALYZE PROPS ONLY (Karakter ambil dari Tab 1)
+export async function analyzePropsAI(scriptData) {
     const apiKey = AppState.config.pollinationsKey;
-    
     const scriptString = JSON.stringify(scriptData, null, 2);
 
     const systemPrompt = `
-    ROLE: Expert Character Designer & Prop Master.
-    TASK: Analyze the Screenplay and list VISUAL ASSETS.
+    ROLE: Prop Master.
+    TASK: Analyze the Screenplay and list IMPORTANT PROPS or BODY PART CLOSE-UPS needed.
     
-    *** CRITICAL CHARACTER DESIGN RULES (MUTLAK) ***
-    If the character is a "Humanoid Cat" / "Cat Person":
-    1. ANATOMY: Must be 100% HUMANOID (Two arms, two legs, standing upright like a human).
-    2. SKIN/FUR: Covered in "FINE SOFT VELVET-LIKE FUR". Do NOT use "rough animal fur".
-    3. HEAD: "Stylized Anthropomorphic Head" (Expressive, fits the humanoid body). Do NOT use a photorealistic feral cat head pasted on a human body.
-    4. HANDS: Humanoid hands with fingers (essential for holding props).
-    5. CLOTHING: Must wear FULL CLOTHING including FOOTWEAR (Boots/Shoes). NO BARE PAWS.
+    INSTRUCTIONS:
+    - DO NOT list main characters (we already have them).
+    - ONLY list objects (e.g., "Torn Map", "Glowing Crystal") or specific body parts mentioned in close-ups (e.g., "Trembling Hand", "Muddy Boots").
+    - Provide a detailed visual description for each prop.
     
     OUTPUT JSON FORMAT:
     {
-        "assets": [
+        "props": [
             {
-                "name": "Ryo",
-                "type": "character",
-                "desc": "Full body shot of Ryo. Male Anthropomorphic Cat. Athletic humanoid build covered in silver velvet fur. Stylized feline face. Wearing tactical vest, cargo pants, and heavy boots."
+                "name": "Torn Map",
+                "desc": "A vintage topographic map, slightly torn in the middle, yellowed paper texture, detailed ink lines."
             },
             {
-                "name": "Ryo's Hand (Holding Map)",
-                "type": "prop",
-                "desc": "Extreme close up of Ryo's hand. Humanoid shape with silver fur and paw pads, holding a torn map."
+                "name": "Lila's Boots (Close Up)",
+                "desc": "Extreme close up of lightweight waterproof charcoal ankle boots with quick-lace hooks, covered in mud."
             }
         ]
     }
@@ -49,12 +43,12 @@ export async function analyzeAssetsAI(scriptData) {
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
-        console.log("API: Analyzing Assets with Humanoid Logic...");
+        console.log("API: Analyzing Props...");
         const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
             method: 'POST', headers: headers, body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error("Asset Analysis Failed");
+        if (!response.ok) throw new Error("Prop Analysis Failed");
         
         const data = await response.json();
         const text = data.choices[0].message.content.replace(/```json|```/g, '').trim();
@@ -65,14 +59,10 @@ export async function analyzeAssetsAI(scriptData) {
     }
 }
 
-// 2. GENERATE IMAGE (Sama, tapi prompt-nya nanti udah bener dari hasil analisa di atas)
+// 2. GENERATE IMAGE (Murni nerima prompt jadi)
 export async function generateCharImage(prompt, model, width = 1024, height = 1024) {
     const apiKey = AppState.config.pollinationsKey;
-    
-    // Kita tambahin penguat di sini juga biar aman
-    const enhancedPrompt = `(Anthropomorphic, Humanoid body structure, standing upright, fine velvet fur). ${prompt}`;
-    
-    const encodedPrompt = encodeURIComponent(enhancedPrompt);
+    const encodedPrompt = encodeURIComponent(prompt);
     
     let url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${Math.floor(Math.random() * 10000)}`;
     
@@ -85,7 +75,7 @@ export async function generateCharImage(prompt, model, width = 1024, height = 10
     } catch (error) { throw error; }
 }
 
-// 3. UPLOAD IMGBB (Tetap sama)
+// 3. UPLOAD IMGBB
 export async function uploadToImgBB(imageBlob, name) {
     const apiKey = AppState.config.imgbbKey;
     if (!apiKey) throw new Error("API Key ImgBB Kosong!");
@@ -100,4 +90,4 @@ export async function uploadToImgBB(imageBlob, name) {
         const result = await response.json();
         return { url: result.data.url };
     } catch (error) { throw error; }
-        }
+}
