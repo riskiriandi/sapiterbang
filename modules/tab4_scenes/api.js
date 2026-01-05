@@ -1,6 +1,6 @@
 import { AppState } from '../../core/state.js';
 
-// 1. UPLOAD KE IMGBB (Tetap sama)
+// 1. UPLOAD KE IMGBB (Tetap sama, ini udah bener)
 export async function uploadToImgBB(file, name) {
     const apiKey = AppState.config.imgbbKey;
     if (!apiKey) throw new Error("API Key ImgBB Kosong!");
@@ -19,83 +19,94 @@ export async function uploadToImgBB(file, name) {
     }
 }
 
-// 2. GENERATE SHOT (Logic Prompting)
+// 2. GENERATE SHOT (LOGIKA MURNI SEPERTI FILE TEST)
 export async function generateShotImage(prompt, refImageUrls, model = "seedream-pro") {
     const apiKey = AppState.config.pollinationsKey;
     const styleData = AppState.style;
     
-    // Auto Ratio
+    // Auto Ratio (Tetap perlu biar ukuran pas)
     let width = 1024, height = 1024;
     if (styleData.ratio === "16:9") { width = 1280; height = 720; }
     else if (styleData.ratio === "9:16") { width = 720; height = 1280; }
 
-    // Encode Prompt
+    // === BAGIAN INI JIPLAK FILE TEST ===
+    
+    // 1. Encode Prompt (Tanpa dipotong, Tanpa ditambah mantra)
     const encodedPrompt = encodeURIComponent(prompt);
-    const seed = Math.floor(Math.random() * 10000);
-
-    // Image URL Logic
+    
+    // 2. Encode Image (Persis cara lu: encode satu-satu, gabung koma)
     let imageParam = "";
     if (refImageUrls) {
+        // refImageUrls bisa string satu url atau banyak dipisah koma
         const urls = refImageUrls.split(',');
+        // Trim spasi jaga-jaga, lalu encode
         const encodedUrls = urls.map(u => encodeURIComponent(u.trim())).join(',');
+        
         imageParam = `&image=${encodedUrls}`;
     }
-    
-    // Rakit URL
+
+    const seed = Math.floor(Math.random() * 10000);
+
+    // 3. Rakit URL (Struktur sama persis dengan file test)
+    // enhance=false biar AI nurut sama gambar, bukan "mempercantik" sendiri
     const url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${seed}${imageParam}`;
 
+    // 4. Fetch (GET dengan Header Auth)
     const headers = {};
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
+        console.log(`API: Requesting Raw URL...`);
+        // console.log(url); // Buka ini kalau mau liat URL aslinya di console
+
         const response = await fetch(url, { method: 'GET', headers: headers });
+        
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Gen Error (${response.status}): ${errText}`);
         }
+        
         return await response.blob();
+
     } catch (error) {
         throw error;
     }
 }
 
-// 3. SMART BREAKDOWN (VERSI: SKENARIO READER & CROP DETECTOR)
+// 3. SMART BREAKDOWN (Director Tetap Pintar)
+// Bagian ini gak ngaruh ke generate gambar, cuma buat nulis teks awal.
 export async function breakdownScriptAI(screenplayData) {
     const apiKey = AppState.config.pollinationsKey;
-    
-    // Kita kirim Data Skenario (JSON) biar AI tau durasi & adegan
-    // screenplayData diambil dari AppState.story.finalScript
     const scriptString = JSON.stringify(screenplayData, null, 2);
-    
     const charNames = AppState.chars.generatedChars.map(c => c.name).join(', ');
     const style = AppState.style.masterPrompt || "Cinematic";
 
     const systemPrompt = `
     ROLE: Expert Film Director.
-    TASK: Convert the provided SCREENPLAY (JSON) into a Visual Shot List.
+    TASK: Convert SCREENPLAY into Shot List.
     AVAILABLE CHARACTERS: [${charNames}]
     VISUAL STYLE: ${style}
     
-    CRITICAL INSTRUCTION - MANUAL CROP TRIGGER:
-    - Analyze the visual description.
-    - If the shot is an EXTREME CLOSE-UP of a specific body part (e.g., "Hand holding cup", "Feet walking", "Eye looking") AND excludes the face/body...
-    - Set "needs_manual_crop": true.
-    - Set "crop_instruction": "Please upload a photo of [Character]'s [Part] only."
-    - This is to prevent the AI from generating a tiny full-body character.
-
+    INSTRUCTIONS:
+    1. Break story into Scenes and Shots.
+    2. "visual_prompt": Write a CLEAR visual description.
+       - IMPORTANT: If it's a specific body part shot (e.g. feet), DESCRIBE THE CLOTHING/TEXTURE (e.g. "Black boots on wet rock"). Don't just say "Feet".
+    3. "characters_in_shot": List names.
+    4. "video_prompt": Camera movement.
+    
     OUTPUT JSON FORMAT:
     {
         "scenes": [
             {
-                "location": "Scene 1 Location",
+                "location": "Scene 1...",
                 "shots": [
                     {
-                        "shot_info": "Shot 1 (00:00-00:04)",
-                        "visual_prompt": "Low angle close up of Kairo's boots stepping on wet rock...",
-                        "video_prompt": "Camera tracking footstep...",
-                        "characters_in_shot": ["Kairo"],
-                        "needs_manual_crop": true,
-                        "crop_instruction": "Upload crop of Kairo's Boots/Feet"
+                        "shot_info": "Shot 1...",
+                        "visual_prompt": "...",
+                        "video_prompt": "...",
+                        "characters_in_shot": ["Name"],
+                        "needs_manual_crop": false,
+                        "crop_instruction": ""
                     }
                 ]
             }
@@ -128,4 +139,4 @@ export async function breakdownScriptAI(screenplayData) {
     } catch (error) {
         throw error;
     }
-}
+        }
