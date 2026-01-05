@@ -1,37 +1,41 @@
 <div class="animate-fade-in max-w-full mx-auto space-y-6 pb-20 px-2 md:px-4">
     
-    <!-- HEADER & CONTROLS -->
+    <!-- HEADER -->
     <div class="glass-panel p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-30 backdrop-blur-xl border-b border-white/10">
         <div>
             <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                <i class="ph ph-users text-accent"></i> Character Casting
+                <i class="ph ph-briefcase text-accent"></i> Asset Manager
             </h2>
-            <p class="text-xs text-gray-400">Generate visual karakter dari Story & Style.</p>
+            <p class="text-xs text-gray-400">Siapkan Karakter, Properti, dan Detail Shot disini.</p>
         </div>
 
-        <!-- MODEL SELECTOR (Sesuai JSON Lu) -->
-        <div class="flex items-center gap-3">
-            <label class="text-xs font-bold text-gray-400 uppercase">Model:</label>
-            <select id="model-select" class="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-accent outline-none font-mono cursor-pointer hover:bg-white/5 transition-colors">
-                <option value="seedream">Seedream (ByteDance)</option>
-                <option value="seedream-pro">Seedream Pro (4K Quality)</option>
-                <option value="nanobanana">NanoBanana (Gemini Flash)</option>
-                <option value="nanobanana-pro">NanoBanana Pro (Thinking)</option>
-                <option value="flux">Flux (Standard)</option>
-                <option value="turbo">Turbo (Fast)</option>
+        <div class="flex gap-3">
+            <!-- TOMBOL ANALISA -->
+            <button id="btn-analyze-assets" class="btn-pro btn-pro-primary text-xs shadow-lg shadow-accent/20">
+                <i class="ph ph-scan"></i> Analyze Script Requirements
+            </button>
+            
+            <!-- Model Select -->
+            <select id="model-select" class="bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:border-accent outline-none">
+                <option value="seedream-pro">Seedream Pro</option>
+                <option value="flux">Flux</option>
             </select>
         </div>
     </div>
 
-    <!-- CHARACTER GRID -->
-    <!-- Tempat kartu karakter disuntikkan oleh JS -->
-    <div id="char-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <!-- Loading State -->
-        <div class="col-span-full flex flex-col items-center justify-center py-20 text-gray-500 opacity-50">
-            <i class="ph ph-ghost text-6xl mb-4"></i>
-            <p>Belum ada karakter. Buat cerita dulu di Tab 1.</p>
+    <!-- ASSET GRID -->
+    <div id="asset-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <!-- Empty State -->
+        <div id="empty-assets" class="col-span-full flex flex-col items-center justify-center py-20 text-gray-500 opacity-50">
+            <i class="ph ph-cube text-6xl mb-4"></i>
+            <p>Klik "Analyze Script" untuk mendeteksi kebutuhan aset.</p>
         </div>
     </div>
+    
+    <!-- Tombol Tambah Manual -->
+    <button id="btn-add-manual" class="w-full py-3 border border-dashed border-white/10 rounded-xl text-gray-500 hover:text-white text-xs font-bold flex items-center justify-center gap-2">
+        <i class="ph ph-plus"></i> Tambah Aset Manual
+    </button>
 
     <!-- FLOATING NEXT -->
     <div class="fixed bottom-8 right-8 z-50">
@@ -40,4 +44,4 @@
             <i class="ph ph-arrow-right font-bold"></i>
         </button>
     </div>
-                  </div>
+</div>
