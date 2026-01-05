@@ -6,54 +6,51 @@ export default function init() {
     const scriptDisplay = document.getElementById('script-display');
     const scenesContainer = document.getElementById('scenes-container');
     const btnAutoBreakdown = document.getElementById('btn-auto-breakdown');
-    const btnAddScene = document.getElementById('btn-add-scene');
-    const btnClear = document.getElementById('btn-clear-scenes'); // Tombol Reset Baru
+    const btnClear = document.getElementById('btn-clear-scenes');
     const emptyTimeline = document.getElementById('empty-timeline');
 
-    // 1. LOAD DATA NASKAH (Selalu ambil yang terbaru dari Tab 1)
+    // 1. LOAD DATA SKENARIO (YANG ADA DETIKNYA)
     const storyData = AppState.story;
-    if (storyData && storyData.script) {
-        scriptDisplay.innerText = storyData.script;
+    
+    // Cek apakah Fase 2 (Skenario) sudah dibuat di Tab 1?
+    if (storyData && storyData.finalScript && storyData.finalScript.length > 0) {
+        // Tampilkan Skenario Rapi
+        scriptDisplay.innerHTML = storyData.finalScript.map(s => `
+            <div class="mb-3 border-b border-white/5 pb-2">
+                <div class="flex justify-between text-green-400 text-xs font-bold">
+                    <span>${s.timestamp}</span>
+                    <span>${s.location}</span>
+                </div>
+                <p class="text-gray-300 text-xs mt-1">${s.visual}</p>
+            </div>
+        `).join('');
+        
         btnAutoBreakdown.disabled = false;
     } else {
-        scriptDisplay.innerHTML = `<span class="text-red-400">Naskah kosong. Generate di Tab 1 dulu.</span>`;
+        scriptDisplay.innerHTML = `
+            <div class="text-center mt-10">
+                <i class="ph ph-warning text-3xl text-yellow-500 mb-2"></i>
+                <p class="text-red-400 font-bold">Skenario Belum Ada!</p>
+                <p class="text-gray-500 text-xs mt-1">Pergi ke Tab 1 -> Isi Durasi -> Klik "Generate Timed Screenplay"</p>
+            </div>
+        `;
         btnAutoBreakdown.disabled = true;
     }
 
-    // 2. RENDER SCENE YANG ADA
     renderScenes();
 
-    // 3. LOGIC TOMBOL RESET (HAPUS SEMUA)
-    btnClear.addEventListener('click', () => {
-        // Konfirmasi biar gak kepencet
-        if (confirm("⚠️ PERINGATAN: Ini akan menghapus semua Shot & Gambar yang sudah dibuat di Tab ini.\n\nApakah Anda yakin mau Reset?")) {
-            
-            // Kosongkan State
-            SceneState.update({ 
-                scenes: [],
-                storySignature: "" // Reset tanda tangan juga
-            });
-            
-            // Kosongkan Tampilan
-            renderScenes();
-            
-            // Notif kecil
-            alert("Timeline berhasil di-reset! Silakan breakdown cerita baru.");
-        }
-    });
-
-    // 4. AUTO BREAKDOWN (AI DIRECTOR)
+    // 2. AUTO BREAKDOWN (PAKAI DATA SKENARIO)
     btnAutoBreakdown.addEventListener('click', async () => {
-        // Cek kalau masih ada data lama
         if(SceneState.get().scenes.length > 0) {
-            if(!confirm("Timeline tidak kosong. Timpa dengan data baru?")) return;
+            if(!confirm("Reset timeline dan buat baru dari Skenario?")) return;
         }
 
-        btnAutoBreakdown.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Director is working...`;
+        btnAutoBreakdown.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Analyzing Screenplay...`;
         btnAutoBreakdown.disabled = true;
 
         try {
-            const result = await breakdownScriptAI(storyData.script);
+            // Kirim Array Skenario ke AI
+            const result = await breakdownScriptAI(storyData.finalScript);
             
             const newScenes = result.scenes.map((s, i) => ({
                 id: Date.now() + i,
@@ -63,7 +60,12 @@ export default function init() {
                     info: sh.shot_info,
                     visualPrompt: sh.visual_prompt,
                     actionPrompt: sh.video_prompt,
-                    charsInShot: sh.characters_in_shot || [], 
+                    charsInShot: sh.characters_in_shot || [],
+                    
+                    // FITUR BARU: MANUAL CROP TRIGGER
+                    needsCrop: sh.needs_manual_crop || false,
+                    cropInstruction: sh.crop_instruction || "",
+                    
                     imgUrl: null,
                     refImage: null
                 }))
@@ -80,20 +82,7 @@ export default function init() {
         }
     });
 
-    // 5. MANUAL ADD SCENE
-    btnAddScene.addEventListener('click', () => {
-        const newScene = {
-            id: Date.now(),
-            location: "New Scene Location",
-            shots: []
-        };
-        const currentScenes = SceneState.get().scenes || [];
-        currentScenes.push(newScene);
-        SceneState.update({ scenes: currentScenes });
-        renderScenes();
-    });
-
-    // --- RENDER FUNCTIONS (Sama kayak sebelumnya) ---
+    // 3. RENDER UI (DENGAN LOGIC CROP)
     function renderScenes() {
         const scenes = SceneState.get().scenes || [];
         scenesContainer.innerHTML = "";
@@ -110,62 +99,43 @@ export default function init() {
             
             sceneEl.innerHTML = `
                 <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-                    <div class="flex items-center gap-2 w-full mr-4">
-                        <span class="text-accent font-bold text-xs uppercase bg-accent/10 px-2 py-1 rounded">SCENE ${sceneIndex + 1}</span>
-                        <input type="text" class="bg-transparent border-none text-white font-bold text-sm w-full focus:outline-none" value="${scene.location}" id="loc-${scene.id}">
-                    </div>
+                    <span class="text-accent font-bold text-xs uppercase bg-accent/10 px-2 py-1 rounded">${scene.location}</span>
                     <button class="text-red-500 hover:text-red-400" onclick="deleteScene(${sceneIndex})"><i class="ph ph-trash"></i></button>
                 </div>
                 <div class="grid grid-cols-1 gap-6" id="shots-list-${scene.id}"></div>
-                <button class="w-full mt-4 py-2 border border-dashed border-white/20 rounded-lg text-gray-500 hover:text-white text-xs font-bold" id="btn-add-shot-${scene.id}">+ Add Manual Shot</button>
             `;
 
             scenesContainer.appendChild(sceneEl);
             
-            // Listener Update Lokasi
-            sceneEl.querySelector(`#loc-${scene.id}`).addEventListener('change', (e) => {
-                scene.location = e.target.value;
-                SceneState.update();
-            });
-
-            // Listener Add Shot Manual
-            sceneEl.querySelector(`#btn-add-shot-${scene.id}`).addEventListener('click', () => {
-                scene.shots.push({
-                    id: Date.now(),
-                    info: "Manual Shot",
-                    visualPrompt: "",
-                    actionPrompt: "",
-                    charsInShot: [],
-                    imgUrl: null
-                });
-                SceneState.update();
-                renderScenes();
-            });
-
-            // Render Shots
             const shotsContainer = document.getElementById(`shots-list-${scene.id}`);
-            scene.shots.forEach((shot, shotIndex) => {
-                // LOGIC LINK KARAKTER
-                const matchedNames = [];
-                if (shot.charsInShot && shot.charsInShot.length > 0) {
-                    shot.charsInShot.forEach(charName => {
-                        const charData = AppState.chars.generatedChars.find(c => c.name.toLowerCase().includes(charName.toLowerCase()) || charName.toLowerCase().includes(c.name.toLowerCase()));
-                        if (charData && charData.imgbbUrl) matchedNames.push(charData.name);
-                    });
-                }
-                const charBadge = matchedNames.length > 0 
-                    ? `<div class="text-[10px] text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-500/30 flex items-center gap-1 mt-1"><i class="ph ph-link"></i> Linked: ${matchedNames.join(', ')}</div>`
-                    : `<div class="text-[10px] text-gray-500 mt-1 italic">No character linked</div>`;
+            scene.shots.forEach((shot) => {
+                // LOGIC TOMBOL GENERATE vs UPLOAD
+                // Kalau butuh crop, tombol Generate jadi tombol Upload
+                
+                const isCropNeeded = shot.needsCrop && !shot.refImage; // Butuh crop & belum ada gambar
+                
+                const controlButton = isCropNeeded
+                    ? `<button id="btn-upload-${shot.id}" class="btn-pro bg-yellow-500 hover:bg-yellow-400 text-black text-xs py-2 justify-center mt-auto animate-pulse">
+                         <i class="ph ph-upload"></i> ${shot.cropInstruction || "Upload Manual Crop"}
+                       </button>
+                       <input type="file" id="file-manual-${shot.id}" class="hidden" accept="image/*">`
+                    : `<button id="btn-gen-${shot.id}" class="btn-pro btn-pro-primary text-xs py-2 justify-center mt-auto">
+                         <i class="ph ph-lightning"></i> Generate Image
+                       </button>`;
 
                 const shotEl = document.createElement('div');
-                shotEl.className = "flex flex-col md:flex-row gap-4 bg-black/30 p-3 rounded-lg border border-white/5";
+                shotEl.className = `flex flex-col md:flex-row gap-4 bg-black/30 p-3 rounded-lg border ${isCropNeeded ? 'border-yellow-500/50' : 'border-white/5'}`;
 
                 shotEl.innerHTML = `
+                    <!-- GAMBAR -->
                     <div class="w-full md:w-1/3 relative group">
                         <div class="aspect-video bg-black rounded-lg border border-white/10 flex items-center justify-center overflow-hidden relative">
                             ${shot.imgUrl 
                                 ? `<img src="${shot.imgUrl}" class="w-full h-full object-cover">` 
-                                : `<div class="text-center p-4 text-gray-600"><i class="ph ph-image text-3xl mb-1"></i><p class="text-[10px]">Preview</p></div>`
+                                : `<div class="text-center p-4 text-gray-600">
+                                     <i class="ph ${isCropNeeded ? 'ph-warning-circle text-yellow-500' : 'ph-image'} text-3xl mb-1"></i>
+                                     <p class="text-[10px]">${isCropNeeded ? 'Butuh Upload Manual' : 'Preview'}</p>
+                                   </div>`
                             }
                             <div id="loading-${shot.id}" class="absolute inset-0 bg-black/80 hidden flex-col items-center justify-center z-10">
                                 <i class="ph ph-spinner animate-spin text-accent text-2xl"></i>
@@ -174,13 +144,10 @@ export default function init() {
                         ${shot.imgUrl ? `<a href="${shot.imgUrl}" target="_blank" class="absolute top-2 right-2 bg-black/50 p-1 rounded text-white text-xs hover:bg-accent"><i class="ph ph-eye"></i></a>` : ''}
                     </div>
 
+                    <!-- PROMPTS -->
                     <div class="w-full md:w-2/3 flex flex-col gap-2">
                         <div class="flex justify-between items-start">
-                            <div>
-                                <span class="text-[10px] font-bold text-yellow-400">${shot.info || "Shot " + (shotIndex+1)}</span>
-                                ${charBadge}
-                            </div>
-                            <button class="text-red-500 text-[10px]" onclick="deleteShot(${sceneIndex}, ${shotIndex})">Hapus</button>
+                            <span class="text-[10px] font-bold text-yellow-400">${shot.info}</span>
                         </div>
                         <div>
                             <label class="text-[9px] text-gray-500 font-bold uppercase">Visual Prompt</label>
@@ -190,15 +157,14 @@ export default function init() {
                             <label class="text-[9px] text-green-400 font-bold uppercase">Motion Prompt</label>
                             <textarea id="act-${shot.id}" class="w-full bg-black/50 text-gray-300 text-[11px] p-2 rounded border border-white/10 h-12 focus:border-green-500 outline-none resize-none custom-scrollbar">${shot.actionPrompt}</textarea>
                         </div>
-                        <button id="btn-gen-${shot.id}" class="btn-pro btn-pro-primary text-xs py-2 justify-center mt-auto">
-                            <i class="ph ph-lightning"></i> Generate Image
-                        </button>
+                        
+                        <!-- TOMBOL DINAMIS (GENERATE / UPLOAD) -->
+                        ${controlButton}
                     </div>
                 `;
                 shotsContainer.appendChild(shotEl);
 
-                // Listeners
-                const btnGen = document.getElementById(`btn-gen-${shot.id}`);
+                // EVENT LISTENERS
                 const visInput = document.getElementById(`vis-${shot.id}`);
                 const actInput = document.getElementById(`act-${shot.id}`);
 
@@ -210,44 +176,88 @@ export default function init() {
                     });
                 });
 
-                btnGen.addEventListener('click', async () => {
-                    const loading = document.getElementById(`loading-${shot.id}`);
-                    loading.classList.remove('hidden');
-                    loading.classList.add('flex');
-                    btnGen.disabled = true;
-
-                    try {
-                        // Ambil URL Karakter dari AppState (Realtime)
-                        const matchedUrls = [];
-                        if (shot.charsInShot && shot.charsInShot.length > 0) {
-                            shot.charsInShot.forEach(charName => {
-                                const charData = AppState.chars.generatedChars.find(c => c.name.toLowerCase().includes(charName.toLowerCase()) || charName.toLowerCase().includes(c.name.toLowerCase()));
-                                if (charData && charData.imgbbUrl) matchedUrls.push(charData.imgbbUrl);
-                            });
-                        }
-
-                        let refUrls = matchedUrls.length > 0 ? matchedUrls.join(',') : null;
-
-                        const blob = await generateShotImage(visInput.value, refUrls);
-                        const upload = await uploadToImgBB(blob, `shot_${shot.id}`);
+                // LOGIC TOMBOL UPLOAD (MANUAL CROP)
+                if (isCropNeeded) {
+                    const btnUpload = document.getElementById(`btn-upload-${shot.id}`);
+                    const fileInput = document.getElementById(`file-manual-${shot.id}`);
+                    
+                    btnUpload.addEventListener('click', () => fileInput.click());
+                    
+                    fileInput.addEventListener('change', async (e) => {
+                        const file = e.target.files[0];
+                        if(!file) return;
                         
-                        shot.imgUrl = upload.url;
-                        SceneState.update();
-                        renderScenes();
+                        const loading = document.getElementById(`loading-${shot.id}`);
+                        loading.classList.remove('hidden');
+                        loading.classList.add('flex');
+                        
+                        try {
+                            // Upload Crop ke ImgBB
+                            const upload = await uploadToImgBB(file, `crop_${shot.id}`);
+                            
+                            // Simpan sebagai Referensi Utama
+                            shot.refImage = upload.url;
+                            shot.imgUrl = upload.url; // Tampilkan juga
+                            
+                            // Hapus status needsCrop karena user udah upload
+                            // shot.needsCrop = false; // (Opsional: biarin true biar tau ini hasil crop)
+                            
+                            SceneState.update();
+                            renderScenes(); // Refresh biar tombol berubah jadi Generate (buat refine) atau Stay
+                            
+                        } catch (err) {
+                            alert("Upload Gagal: " + err.message);
+                        } finally {
+                            loading.classList.add('hidden');
+                            loading.classList.remove('flex');
+                        }
+                    });
+                } 
+                // LOGIC TOMBOL GENERATE (NORMAL)
+                else {
+                    const btnGen = document.getElementById(`btn-gen-${shot.id}`);
+                    btnGen.addEventListener('click', async () => {
+                        const loading = document.getElementById(`loading-${shot.id}`);
+                        loading.classList.remove('hidden');
+                        loading.classList.add('flex');
+                        btnGen.disabled = true;
 
-                    } catch (e) {
-                        alert(e.message);
-                    } finally {
-                        loading.classList.add('hidden');
-                        loading.classList.remove('flex');
-                        btnGen.disabled = false;
-                    }
-                });
+                        try {
+                            // Logic Link Karakter (Normal)
+                            const matchedUrls = [];
+                            if (shot.charsInShot && shot.charsInShot.length > 0) {
+                                shot.charsInShot.forEach(charName => {
+                                    const charData = AppState.chars.generatedChars.find(c => c.name.toLowerCase().includes(charName.toLowerCase()) || charName.toLowerCase().includes(c.name.toLowerCase()));
+                                    if (charData && charData.imgbbUrl) matchedUrls.push(charData.imgbbUrl);
+                                });
+                            }
+
+                            // Prioritas: Kalau ada Manual Crop (refImage), PAKE ITU.
+                            // Kalau gak ada, pake Link Karakter (matchedUrls).
+                            let refUrls = shot.refImage ? shot.refImage : (matchedUrls.length > 0 ? matchedUrls.join(',') : null);
+
+                            const blob = await generateShotImage(visInput.value, refUrls);
+                            const upload = await uploadToImgBB(blob, `shot_${shot.id}`);
+                            
+                            shot.imgUrl = upload.url;
+                            SceneState.update();
+                            renderScenes();
+
+                        } catch (e) {
+                            alert(e.message);
+                        } finally {
+                            loading.classList.add('hidden');
+                            loading.classList.remove('flex');
+                            btnGen.disabled = false;
+                        }
+                    });
+                }
             });
         });
     }
 
-    // Delete Helpers
+    // ... (Fungsi deleteScene dan btnClear sama seperti sebelumnya) ...
+    // Pastikan copy paste fungsi deleteScene dan btnClear dari kode sebelumnya ya bro
     window.deleteScene = (idx) => {
         if(confirm("Hapus Scene?")) {
             const scenes = SceneState.get().scenes;
@@ -256,13 +266,11 @@ export default function init() {
             renderScenes();
         }
     };
-
-    window.deleteShot = (sceneIdx, shotIdx) => {
-        if(confirm("Hapus Shot?")) {
-            const scenes = SceneState.get().scenes;
-            scenes[sceneIdx].shots.splice(shotIdx, 1);
-            SceneState.update({ scenes });
+    
+    document.getElementById('btn-clear-scenes').addEventListener('click', () => {
+        if(confirm("Reset semua timeline?")) {
+            SceneState.update({ scenes: [], storySignature: "" });
             renderScenes();
         }
-    };
-        }
+    });
+                    }
