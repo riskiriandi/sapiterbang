@@ -1,11 +1,18 @@
-// MODULE STATE: CHARACTERS (TAB 3)
+// MODULE STATE: ASSETS & CASTING (TAB 3)
 const LOCAL_KEY = 'MrG_Tab3_Data';
 
 export const CharState = {
     data: {
-        selectedModel: "seedream", // Default sesuai request lu
-        generatedChars: [] 
-        // Struktur: { name: "Nara", prompt: "...", imgbbUrl: "...", deleteUrl: "..." }
+        selectedModel: "seedream-pro",
+        // Dulu namanya 'generatedChars', sekarang kita panggil 'assets' biar umum
+        assets: [] 
+        // Struktur: { 
+        //   id: 123, 
+        //   name: "Ryo's Hand", 
+        //   type: "prop", // atau "character"
+        //   desc: "Close up hand holding map...", 
+        //   imgbbUrl: "..." 
+        // }
     },
 
     init() {
@@ -14,17 +21,17 @@ export const CharState = {
     },
 
     update(payload) {
-        if (payload.model !== undefined) this.data.selectedModel = payload.model;
+        if (payload.model) this.data.selectedModel = payload.model;
         
-        // Logic Update/Insert Karakter
-        if (payload.charUpdate) {
-            const index = this.data.generatedChars.findIndex(c => c.name === payload.charUpdate.name);
+        if (payload.assets) {
+            this.data.assets = payload.assets;
+        }
+        
+        // Logic Update Satu Aset
+        if (payload.assetUpdate) {
+            const index = this.data.assets.findIndex(a => a.id === payload.assetUpdate.id);
             if (index >= 0) {
-                // Update data yang ada
-                this.data.generatedChars[index] = { ...this.data.generatedChars[index], ...payload.charUpdate };
-            } else {
-                // Karakter baru
-                this.data.generatedChars.push(payload.charUpdate);
+                this.data.assets[index] = { ...this.data.assets[index], ...payload.assetUpdate };
             }
         }
 
@@ -39,9 +46,10 @@ export const CharState = {
         return this.data;
     },
 
-    // Helper: Ambil data gambar karakter tertentu
-    getCharImage(name) {
-        const char = this.data.generatedChars.find(c => c.name === name);
-        return char ? char.imgbbUrl : null;
+    // Helper buat Tab 4 nanti nyari gambar
+    getAssetImage(name) {
+        // Cari yang namanya mirip
+        const asset = this.data.assets.find(a => a.name.toLowerCase().includes(name.toLowerCase()));
+        return asset ? asset.imgbbUrl : null;
     }
 };
