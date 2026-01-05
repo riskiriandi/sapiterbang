@@ -1,9 +1,9 @@
-import { AppState } from './state.js';
+import { AppState } from '../../core/state.js';
 
-// 1. UPLOAD KE IMGBB (Gak berubah, karena logika lu udah bener)
+// 1. UPLOAD KE IMGBB (Tetap sama, ini udah bener)
 export async function uploadToImgBB(file, name) {
     const apiKey = AppState.config.imgbbKey;
-    if (!apiKey) throw new Error("API Key ImgBB Kosong! Cek Settings.");
+    if (!apiKey) throw new Error("API Key ImgBB Kosong!");
 
     const formData = new FormData();
     formData.append("image", file, name);
@@ -13,55 +13,52 @@ export async function uploadToImgBB(file, name) {
             method: "POST", body: formData
         });
         const result = await response.json();
-        if(!result.success) throw new Error("ImgBB Failed: " + (result.error?.message || "Unknown error"));
-        
         return { url: result.data.url, deleteUrl: result.data.delete_url };
     } catch (error) {
         throw error;
     }
 }
 
-// 2. GENERATE SHOT (REVISI TOTAL: MIRIP FILE TEST)
+// 2. GENERATE SHOT (LOGIKA MURNI SEPERTI FILE TEST)
 export async function generateShotImage(prompt, refImageUrls, model = "seedream-pro") {
     const apiKey = AppState.config.pollinationsKey;
     const styleData = AppState.style;
     
-    // Auto Ratio (Wajib ikut Global Setting sesuai request lu)
+    // Auto Ratio (Tetap perlu biar ukuran pas)
     let width = 1024, height = 1024;
-    if (styleData && styleData.ratio === "16:9") { width = 1280; height = 720; }
-    else if (styleData && styleData.ratio === "9:16") { width = 720; height = 1280; }
+    if (styleData.ratio === "16:9") { width = 1280; height = 720; }
+    else if (styleData.ratio === "9:16") { width = 720; height = 1280; }
 
-    // 1. Encode Prompt
+    // === BAGIAN INI JIPLAK FILE TEST ===
+    
+    // 1. Encode Prompt (Tanpa dipotong, Tanpa ditambah mantra)
     const encodedPrompt = encodeURIComponent(prompt);
     
-    // 2. Encode Image (LOGIKA BARU: LEBIH PINTAR)
-    // Ini menangani spasi, koma, atau enter sebagai pemisah
+    // 2. Encode Image (Persis cara lu: encode satu-satu, gabung koma)
     let imageParam = "";
-    if (refImageUrls && refImageUrls.length > 5) {
-        // Regex: Pisahkan berdasarkan Koma, Spasi, atau Baris Baru
-        const urls = refImageUrls.split(/[\s,]+/); 
-        // Filter yang kosong, lalu encode satu-satu, gabung pakai KOMA
-        const validUrls = urls.filter(u => u.trim().length > 0).map(u => encodeURIComponent(u.trim()));
+    if (refImageUrls) {
+        // refImageUrls bisa string satu url atau banyak dipisah koma
+        const urls = refImageUrls.split(',');
+        // Trim spasi jaga-jaga, lalu encode
+        const encodedUrls = urls.map(u => encodeURIComponent(u.trim())).join(',');
         
-        if (validUrls.length > 0) {
-            imageParam = `image=${validUrls.join(',')}&`; 
-            // Perhatikan: Gw taruh 'image=' di depan variabel, nanti ditempel di awal URL
-        }
+        imageParam = `&image=${encodedUrls}`;
     }
 
     const seed = Math.floor(Math.random() * 10000);
 
-    // 3. Rakit URL (Struktur Identik dengan File Test)
-    // Urutan: /image/PROMPT?image=URLS&model=...
-    // nologo=true & enhance=false (biar nurut sama gambar referensi)
-    const url = `https://gen.pollinations.ai/image/${encodedPrompt}?${imageParam}model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${seed}`;
+    // 3. Rakit URL (Struktur sama persis dengan file test)
+    // enhance=false biar AI nurut sama gambar, bukan "mempercantik" sendiri
+    const url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${seed}${imageParam}`;
 
-    // 4. Fetch
+    // 4. Fetch (GET dengan Header Auth)
     const headers = {};
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
-        console.log(`API Request: ${url}`); // Cek console kalau mau liat URL final
+        console.log(`API: Requesting Raw URL...`);
+        // console.log(url); // Buka ini kalau mau liat URL aslinya di console
+
         const response = await fetch(url, { method: 'GET', headers: headers });
         
         if (!response.ok) {
@@ -76,16 +73,13 @@ export async function generateShotImage(prompt, refImageUrls, model = "seedream-
     }
 }
 
-// 3. SMART BREAKDOWN (Director AI)
+// 3. SMART BREAKDOWN (Director Tetap Pintar)
+// Bagian ini gak ngaruh ke generate gambar, cuma buat nulis teks awal.
 export async function breakdownScriptAI(screenplayData) {
     const apiKey = AppState.config.pollinationsKey;
-    // Safety check kalau CharState belum ready
-    const charNames = (AppState.chars && AppState.chars.generatedChars) 
-        ? AppState.chars.generatedChars.map(c => c.name).join(', ') 
-        : "Unknown";
-        
     const scriptString = JSON.stringify(screenplayData, null, 2);
-    const style = (AppState.style && AppState.style.masterPrompt) ? AppState.style.masterPrompt : "Cinematic";
+    const charNames = AppState.chars.generatedChars.map(c => c.name).join(', ');
+    const style = AppState.style.masterPrompt || "Cinematic";
 
     const systemPrompt = `
     ROLE: Expert Film Director.
@@ -95,22 +89,22 @@ export async function breakdownScriptAI(screenplayData) {
     
     INSTRUCTIONS:
     1. Break story into Scenes and Shots.
-    2. "visual_prompt": Write a CLEAR visual description suitable for AI Image Generator.
-       - IMPORTANT: If the shot focuses on a specific body part (e.g. feet, hand), DESCRIBE THE CONTEXT (e.g. "Close up of dirty boots on wet pavement").
-    3. "characters_in_shot": List names of characters present in the shot.
-    4. "video_prompt": Camera movement description.
+    2. "visual_prompt": Write a CLEAR visual description.
+       - IMPORTANT: If it's a specific body part shot (e.g. feet), DESCRIBE THE CLOTHING/TEXTURE (e.g. "Black boots on wet rock"). Don't just say "Feet".
+    3. "characters_in_shot": List names.
+    4. "video_prompt": Camera movement.
     
     OUTPUT JSON FORMAT:
     {
         "scenes": [
             {
-                "location": "Scene Location...",
+                "location": "Scene 1...",
                 "shots": [
                     {
-                        "shot_info": "Wide Shot / Close Up...",
+                        "shot_info": "Shot 1...",
                         "visual_prompt": "...",
                         "video_prompt": "...",
-                        "characters_in_shot": ["Name1", "Name2"],
+                        "characters_in_shot": ["Name"],
                         "needs_manual_crop": false,
                         "crop_instruction": ""
                     }
@@ -145,4 +139,4 @@ export async function breakdownScriptAI(screenplayData) {
     } catch (error) {
         throw error;
     }
-             }
+        }
