@@ -19,7 +19,7 @@ export async function uploadToImgBB(file, name) {
     }
 }
 
-// 2. GENERATE SHOT (VERSI POLOSAN - TANPA MANTRA)
+// 2. GENERATE SHOT (Logic Prompting)
 export async function generateShotImage(prompt, refImageUrls, model = "seedream-pro") {
     const apiKey = AppState.config.pollinationsKey;
     const styleData = AppState.style;
@@ -29,76 +29,73 @@ export async function generateShotImage(prompt, refImageUrls, model = "seedream-
     if (styleData.ratio === "16:9") { width = 1280; height = 720; }
     else if (styleData.ratio === "9:16") { width = 720; height = 1280; }
 
-    // === PERUBAHAN: GAK ADA INJECT MANTRA ===
-    // Kita kirim prompt mentah-mentah sesuai apa yang ditulis AI Director
+    // Encode Prompt
     const encodedPrompt = encodeURIComponent(prompt);
     const seed = Math.floor(Math.random() * 10000);
 
-    // === LOGIKA IMAGE URL (Sesuai File Test Lu) ===
+    // Image URL Logic
     let imageParam = "";
     if (refImageUrls) {
-        // Pecah koma, trim spasi, encode satu-satu, gabung koma lagi
         const urls = refImageUrls.split(',');
         const encodedUrls = urls.map(u => encodeURIComponent(u.trim())).join(',');
         imageParam = `&image=${encodedUrls}`;
     }
     
-    // RAKIT URL
-    // nologo=true, enhance=false (biar nurut)
+    // Rakit URL
     const url = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${model}&width=${width}&height=${height}&nologo=true&enhance=false&seed=${seed}${imageParam}`;
 
-    // FETCH (GET dengan Header Auth)
     const headers = {};
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
     try {
-        console.log(`API: Generating...`);
         const response = await fetch(url, { method: 'GET', headers: headers });
-        
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Gen Error (${response.status}): ${errText}`);
         }
-        
         return await response.blob();
-
     } catch (error) {
-        console.error("Generate Shot Error:", error);
         throw error;
     }
 }
 
-// 3. SMART BREAKDOWN (SAMA KEK SEBELUMNYA)
-export async function breakdownScriptAI(fullScript) {
+// 3. SMART BREAKDOWN (VERSI: SKENARIO READER & CROP DETECTOR)
+export async function breakdownScriptAI(screenplayData) {
     const apiKey = AppState.config.pollinationsKey;
+    
+    // Kita kirim Data Skenario (JSON) biar AI tau durasi & adegan
+    // screenplayData diambil dari AppState.story.finalScript
+    const scriptString = JSON.stringify(screenplayData, null, 2);
+    
     const charNames = AppState.chars.generatedChars.map(c => c.name).join(', ');
     const style = AppState.style.masterPrompt || "Cinematic";
 
     const systemPrompt = `
     ROLE: Expert Film Director.
-    TASK: Breakdown script into a Shot List.
+    TASK: Convert the provided SCREENPLAY (JSON) into a Visual Shot List.
     AVAILABLE CHARACTERS: [${charNames}]
     VISUAL STYLE: ${style}
     
-    INSTRUCTIONS:
-    1. Break story into Scenes and Shots.
-    2. "visual_prompt": Write a CONCISE visual description (Max 30 words).
-       - Focus ONLY on Action, Lighting, and Angle.
-       - Do NOT include aspect ratio terms.
-    3. "characters_in_shot": List EXACT names of characters present in this shot.
-    4. "video_prompt": Camera movement description.
-    
+    CRITICAL INSTRUCTION - MANUAL CROP TRIGGER:
+    - Analyze the visual description.
+    - If the shot is an EXTREME CLOSE-UP of a specific body part (e.g., "Hand holding cup", "Feet walking", "Eye looking") AND excludes the face/body...
+    - Set "needs_manual_crop": true.
+    - Set "crop_instruction": "Please upload a photo of [Character]'s [Part] only."
+    - This is to prevent the AI from generating a tiny full-body character.
+
     OUTPUT JSON FORMAT:
     {
         "scenes": [
             {
-                "location": "Scene 1...",
+                "location": "Scene 1 Location",
                 "shots": [
                     {
-                        "shot_info": "Shot 1...",
-                        "visual_prompt": "Low angle, Kairo climbing rocky slope, sunrise lighting...",
-                        "video_prompt": "Camera tracking forward...",
-                        "characters_in_shot": ["Kairo", "Miri"] 
+                        "shot_info": "Shot 1 (00:00-00:04)",
+                        "visual_prompt": "Low angle close up of Kairo's boots stepping on wet rock...",
+                        "video_prompt": "Camera tracking footstep...",
+                        "characters_in_shot": ["Kairo"],
+                        "needs_manual_crop": true,
+                        "crop_instruction": "Upload crop of Kairo's Boots/Feet"
                     }
                 ]
             }
@@ -110,7 +107,7 @@ export async function breakdownScriptAI(fullScript) {
         model: "openai", 
         messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: `SCRIPT:\n${fullScript}` }
+            { role: "user", content: `SCREENPLAY DATA:\n${scriptString}` }
         ],
         jsonMode: true,
         seed: 42
@@ -131,4 +128,4 @@ export async function breakdownScriptAI(fullScript) {
     } catch (error) {
         throw error;
     }
-        }
+}
