@@ -6,28 +6,77 @@ export default function init() {
     const scriptDisplay = document.getElementById('script-display');
     const scenesContainer = document.getElementById('scenes-container');
     const btnAutoBreakdown = document.getElementById('btn-auto-breakdown');
+    const btnAddScene = document.getElementById('btn-add-scene');
     const btnClear = document.getElementById('btn-clear-scenes');
     const emptyTimeline = document.getElementById('empty-timeline');
 
-    // 1. LOAD DATA
+    // 1. LOAD DATA DARI TAB 1
     const storyData = AppState.story;
+    
+    // Tampilkan Naskah
     if (storyData && storyData.script) {
         scriptDisplay.innerText = storyData.script;
     } else {
-        scriptDisplay.innerHTML = `<span class="text-red-400">Naskah kosong.</span>`;
+        scriptDisplay.innerHTML = `<span class="text-red-400">Naskah kosong. Generate di Tab 1 dulu.</span>`;
         btnAutoBreakdown.disabled = true;
     }
 
+    // === FITUR BARU: SENSOR PERUBAHAN CERITA ===
+    checkStoryUpdate();
+
+    function checkStoryUpdate() {
+        const savedState = SceneState.get();
+        const currentStorySign = storyData.rawIdea || "No Story"; // Kita pake Ide Kasar sebagai tanda tangan
+        
+        // Cek: Apakah ada scene lama TAPI ceritanya udah beda?
+        if (savedState.scenes.length > 0 && savedState.storySignature !== currentStorySign) {
+            // Munculin Alert Banner di atas Timeline
+            const alertDiv = document.createElement('div');
+            alertDiv.className = "bg-yellow-500/20 border border-yellow-500 text-yellow-200 p-4 rounded-xl mb-6 flex justify-between items-center animate-pulse";
+            alertDiv.innerHTML = `
+                <div>
+                    <strong class="block text-sm"><i class="ph ph-warning-circle"></i> CERITA BARU TERDETEKSI!</strong>
+                    <span class="text-xs">Timeline ini masih pake data cerita lama. Mau di-update?</span>
+                </div>
+                <button id="btn-force-update" class="bg-yellow-500 text-black px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-400">
+                    Reset & Update Timeline
+                </button>
+            `;
+            
+            // Sisipkan di atas container scene
+            scenesContainer.parentElement.insertBefore(alertDiv, scenesContainer);
+
+            // Logic Tombol Reset
+            document.getElementById('btn-force-update').addEventListener('click', () => {
+                if(confirm("Yakin? Semua gambar shot lama akan dihapus.")) {
+                    SceneState.update({ 
+                        scenes: [], 
+                        storySignature: currentStorySign // Update tanda tangan jadi yang baru
+                    });
+                    alertDiv.remove(); // Hapus alert
+                    renderScenes(); // Kosongkan timeline
+                    
+                    // Opsional: Langsung trigger breakdown otomatis
+                    // btnAutoBreakdown.click(); 
+                }
+            });
+        }
+    }
+
+    // 2. RENDER SCENES
     renderScenes();
 
-    // 2. AUTO BREAKDOWN
+    // 3. AUTO BREAKDOWN (AI DIRECTOR)
     btnAutoBreakdown.addEventListener('click', async () => {
-        if(!confirm("AI akan membuat Shot List otomatis. Data lama ditimpa?")) return;
+        if(SceneState.get().scenes.length > 0) {
+            if(!confirm("Timpa timeline yang ada dengan Breakdown baru?")) return;
+        }
 
         btnAutoBreakdown.innerHTML = `<i class="ph ph-spinner animate-spin"></i> Director is working...`;
         btnAutoBreakdown.disabled = true;
 
         try {
+            // Panggil AI
             const result = await breakdownScriptAI(storyData.script);
             
             const newScenes = result.scenes.map((s, i) => ({
@@ -38,14 +87,18 @@ export default function init() {
                     info: sh.shot_info,
                     visualPrompt: sh.visual_prompt,
                     actionPrompt: sh.video_prompt,
-                    // Simpan list karakter yang dideteksi AI
                     charsInShot: sh.characters_in_shot || [], 
                     imgUrl: null,
-                    refImage: null // Buat manual upload override
+                    refImage: null
                 }))
             }));
 
-            SceneState.update({ scenes: newScenes });
+            // SIMPAN STATE + SIGNATURE CERITA SAAT INI
+            SceneState.update({ 
+                scenes: newScenes,
+                storySignature: storyData.rawIdea // Simpan tanda tangan biar sinkron
+            });
+            
             renderScenes();
 
         } catch (error) {
@@ -56,7 +109,7 @@ export default function init() {
         }
     });
 
-    // 3. RENDER UI
+    // 4. RENDER FUNCTION (Sama kayak sebelumnya)
     function renderScenes() {
         const scenes = SceneState.get().scenes || [];
         scenesContainer.innerHTML = "";
@@ -83,14 +136,13 @@ export default function init() {
             
             const shotsContainer = document.getElementById(`shots-list-${scene.id}`);
             scene.shots.forEach((shot) => {
-                // LOGIC CARI URL KARAKTER
-                // Kita cari karakter di Tab 3 yang namanya cocok dengan deteksi AI
+                // LOGIC CARI URL KARAKTER (Biar selalu update dengan Tab 3 terbaru)
                 const matchedUrls = [];
                 const matchedNames = [];
                 
                 if (shot.charsInShot && shot.charsInShot.length > 0) {
                     shot.charsInShot.forEach(charName => {
-                        // Cari di AppState.chars (Case insensitive search)
+                        // Kita cari REALTIME dari AppState.chars (bukan data simpanan lama)
                         const charData = AppState.chars.generatedChars.find(c => c.name.toLowerCase().includes(charName.toLowerCase()) || charName.toLowerCase().includes(c.name.toLowerCase()));
                         
                         if (charData && charData.imgbbUrl) {
@@ -100,18 +152,14 @@ export default function init() {
                     });
                 }
 
-                // Tampilan Badge Karakter Terdeteksi
                 const charBadge = matchedNames.length > 0 
-                    ? `<div class="text-[10px] text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-500/30 flex items-center gap-1 mt-1">
-                         <i class="ph ph-link"></i> Linked: ${matchedNames.join(', ')}
-                       </div>`
+                    ? `<div class="text-[10px] text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-500/30 flex items-center gap-1 mt-1"><i class="ph ph-link"></i> Linked: ${matchedNames.join(', ')}</div>`
                     : `<div class="text-[10px] text-gray-500 mt-1 italic">No character linked</div>`;
 
                 const shotEl = document.createElement('div');
                 shotEl.className = "flex flex-col md:flex-row gap-4 bg-black/30 p-3 rounded-lg border border-white/5";
 
                 shotEl.innerHTML = `
-                    <!-- KIRI: GAMBAR -->
                     <div class="w-full md:w-1/3 relative group">
                         <div class="aspect-video bg-black rounded-lg border border-white/10 flex items-center justify-center overflow-hidden relative">
                             ${shot.imgUrl 
@@ -125,28 +173,21 @@ export default function init() {
                         ${shot.imgUrl ? `<a href="${shot.imgUrl}" target="_blank" class="absolute top-2 right-2 bg-black/50 p-1 rounded text-white text-xs hover:bg-accent"><i class="ph ph-eye"></i></a>` : ''}
                     </div>
 
-                    <!-- KANAN: PROMPTS -->
                     <div class="w-full md:w-2/3 flex flex-col gap-2">
                         <div class="flex justify-between items-start">
                             <div>
                                 <span class="text-[10px] font-bold text-yellow-400">${shot.info || "Shot"}</span>
-                                ${charBadge} <!-- BADGE MUNCUL DISINI -->
+                                ${charBadge}
                             </div>
                         </div>
-
-                        <!-- Visual Prompt -->
                         <div>
                             <label class="text-[9px] text-gray-500 font-bold uppercase">Visual Prompt</label>
                             <textarea id="vis-${shot.id}" class="w-full bg-black/50 text-gray-300 text-[11px] p-2 rounded border border-white/10 h-16 focus:border-accent outline-none resize-none custom-scrollbar">${shot.visualPrompt}</textarea>
                         </div>
-
-                        <!-- Action Prompt -->
                         <div>
                             <label class="text-[9px] text-green-400 font-bold uppercase">Motion Prompt</label>
                             <textarea id="act-${shot.id}" class="w-full bg-black/50 text-gray-300 text-[11px] p-2 rounded border border-white/10 h-12 focus:border-green-500 outline-none resize-none custom-scrollbar">${shot.actionPrompt}</textarea>
                         </div>
-
-                        <!-- Generate Button -->
                         <button id="btn-gen-${shot.id}" class="btn-pro btn-pro-primary text-xs py-2 justify-center mt-auto">
                             <i class="ph ph-lightning"></i> Generate Image
                         </button>
@@ -167,7 +208,6 @@ export default function init() {
                     });
                 });
 
-                // GENERATE CLICK
                 btnGen.addEventListener('click', async () => {
                     const loading = document.getElementById(`loading-${shot.id}`);
                     loading.classList.remove('hidden');
@@ -175,23 +215,14 @@ export default function init() {
                     btnGen.disabled = true;
 
                     try {
-                        // LOGIC PENGGABUNGAN URL
-                        // Prioritas: 
-                        // 1. Manual Upload (shot.refImage) -> Kalau user mau override
-                        // 2. Auto Detected Characters (matchedUrls) -> Kalau normal
-                        
                         let refUrls = null;
-                        
                         if (shot.refImage) {
-                            refUrls = shot.refImage; // Manual override
+                            refUrls = shot.refImage;
                         } else if (matchedUrls.length > 0) {
-                            refUrls = matchedUrls.join(','); // Gabungan URL Karakter (Koma separated)
+                            refUrls = matchedUrls.join(',');
                         }
 
-                        // Generate
                         const blob = await generateShotImage(visInput.value, refUrls);
-                        
-                        // Upload Result
                         const upload = await uploadToImgBB(blob, `shot_${shot.id}`);
                         
                         shot.imgUrl = upload.url;
@@ -221,7 +252,7 @@ export default function init() {
     
     document.getElementById('btn-clear-scenes').addEventListener('click', () => {
         if(confirm("Reset semua timeline?")) {
-            SceneState.update({ scenes: [] });
+            SceneState.update({ scenes: [], storySignature: "" });
             renderScenes();
         }
     });
