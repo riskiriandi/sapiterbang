@@ -1,31 +1,23 @@
-// MODULE STATE: SCENES (TAB 4)
-const LOCAL_KEY = 'MrG_Tab4_Data';
+// MODULE STATE: STORY (TAB 1)
+const LOCAL_KEY = 'MrG_Tab1_Data';
 
-export const SceneState = {
+export const StoryState = {
     data: {
-        scenes: [] 
+        rawIdea: "",
+        storyContext: "",   // Cerita Utuh (Novel Style)
+        characters: [],     // Data Karakter (Nama, Deskripsi Fisik)
+        targetDuration: 60, // Default 60 detik
+        finalScript: []     // Naskah Skenario dengan Timestamp
     },
 
     init() {
         const saved = localStorage.getItem(LOCAL_KEY);
-        if (saved) {
-            try {
-                this.data = JSON.parse(saved);
-            } catch (e) {
-                console.error("Gagal load scene data", e);
-            }
-        }
+        if (saved) this.data = JSON.parse(saved);
     },
 
-    // PERBAIKAN DISINI: Tambah parameter default "payload = {}"
-    // Jadi kalau dipanggil kosongan, dia gak error.
-    update(payload = {}) {
-        // Cek apakah ada data scenes baru yang dikirim?
-        if (payload.scenes) {
-            this.data.scenes = payload.scenes;
-        }
-        
-        // Kalau payload kosong, dia tetap lanjut nge-save data yang ada di memori
+    update(payload) {
+        // Update parsial (hanya yang dikirim)
+        this.data = { ...this.data, ...payload };
         this.save();
     },
 
